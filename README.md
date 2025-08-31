@@ -56,9 +56,6 @@ Before you begin, ensure you have the following installed:
    ```
 
 4. **Database Setup**
-> [!IMPORTANT]
-> isma will be implemented in the future.
->
 
    ```bash
    # Generate Prisma client
@@ -67,8 +64,6 @@ Before you begin, ensure you have the following installed:
    # Run database migrations
    pnpm prisma migrate dev
    
-   # (Optional) Seed the database
-   pnpm prisma db seed
    ```
 
 5. **Start the development server**
@@ -122,9 +117,35 @@ pnpm run build
 ```
 
 ### Database
-# Generate Prisma client
-> [!NOTE]
-> Prisma will be implemented in the future.
+
+Prisma requires two main components to work effectively:
+
+1. **Prisma Client**: A type-safe database client that's automatically generated based on your schema. It provides:
+   - Auto-completion in your IDE
+   - Type safety for database queries
+   - Protection against runtime errors
+
+2. **Database Migrations**: Version control for your database schema
+
+#### Managing the Database
+
+To generate the Prisma client after schema changes:
+
+```bash
+pnpm run prisma:generate
+```
+
+To create a new migration (when you modify the schema):
+```bash
+pnpm run prisma:migrate --name your_migration_name
+```
+
+**Note**: The `--name` parameter is mandatory when creating new migrations. Choose a descriptive name that explains what the migration does (e.g., `add_user_avatar_field`, `create_books_table`, etc.).
+
+To apply existing migrations to the database:
+```bash
+pnpm run prisma:migrate
+```
 
 
 ### Testing
