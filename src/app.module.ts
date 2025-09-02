@@ -5,6 +5,7 @@ import { UserModule } from './modules/users/user.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthorModule } from './modules/author/author.module';
 import { StudentsModule } from './modules/students/students.module';
+import { InstitutionsModule } from './modules/institutions/institutions.module';
 
 @Module({
   imports: [
@@ -12,8 +13,9 @@ import { StudentsModule } from './modules/students/students.module';
       envFilePath: ',,/.env',
     }),
     AuthorModule,
-    UserModule,
+    InstitutionsModule,
     StudentsModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],
