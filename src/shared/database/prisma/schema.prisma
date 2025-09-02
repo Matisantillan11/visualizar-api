@@ -41,6 +41,7 @@ model Author {
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
 
+  name String
   biography String?
   imageUrl  String?
 }
