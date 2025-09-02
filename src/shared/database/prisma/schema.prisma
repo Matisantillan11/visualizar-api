@@ -67,7 +67,7 @@ model Institution {
 
   name String
   address String
-  phone Int
+  phone String
   email String @unique
 }
 
