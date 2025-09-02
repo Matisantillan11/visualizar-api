@@ -58,3 +58,17 @@ model Student {
   user   User   @relation(fields: [userId], references: [id])
   userId String @unique
 }
+
+model Institution {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  name String
+  address String
+  phone Int
+  email String @unique
+}
+
+
