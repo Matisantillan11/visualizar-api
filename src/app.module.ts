@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { UserModule } from './modules/users/user.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthorModule } from './modules/author/author.module';
+import { StudentsModule } from './modules/students/students.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { AuthorModule } from './modules/author/author.module';
     }),
     AuthorModule,
     UserModule,
+    StudentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -32,6 +32,7 @@ model User {
   role  Role
  
   author Author?
+  student Student?
 }
 
 
@@ -46,4 +47,14 @@ model Author {
 
   biography String?
   imageUrl  String?
+}
+
+model Student {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
 }

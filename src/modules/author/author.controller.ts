@@ -10,15 +10,11 @@ import {
 import { Author, Prisma } from '@prisma/client';
 import { AuthorService } from './author.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { UsersService } from '../users/user.service';
 
 @Controller('/api/authors')
 @ApiTags('Authors')
 export class AuthorController {
-  constructor(
-    private readonly authorService: AuthorService,
-    private readonly userService: UsersService,
-  ) {}
+  constructor(private readonly authorService: AuthorService) {}
 
   @Get('/')
   @ApiOperation({ summary: 'Get all authors' })
