@@ -11,30 +11,11 @@ export class AuthorService {
   ): Promise<Author | null> {
     return this.prisma.author.findUnique({
       where: authorWhereUniqueInput,
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            dni: true,
-          },
-        },
-      },
     });
   }
 
   async getAuthors(): Promise<Author[]> {
-    return this.prisma.author.findMany({
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            dni: true,
-          },
-        },
-      },
-    });
+    return this.prisma.author.findMany({});
   }
 
   async createAuthor(data: Prisma.AuthorCreateInput): Promise<Author> {

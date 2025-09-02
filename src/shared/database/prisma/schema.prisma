@@ -30,8 +30,7 @@ model User {
   name  String?
   dni   String  @unique
   role  Role
- 
-  author Author?
+
   student Student?
 }
 
@@ -41,9 +40,6 @@ model Author {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
-  
-  user   User   @relation(fields: [userId], references: [id])
-  userId String @unique
 
   biography String?
   imageUrl  String?
