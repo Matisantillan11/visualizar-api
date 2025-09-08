@@ -33,8 +33,7 @@ export class UserController {
   @Post('/search')
   @ApiOperation({ summary: 'Get a user by email' })
   @ApiResponse({ status: 200, description: 'Get a user by email' })
-  getUserByEmail(@Body() where: { email: string }): Promise<User | null> {
-    const { email } = where;
+  getUserByEmail(@Body('email') email: string): Promise<User | null> {
     return this.userService.getUser({ email });
   }
 
