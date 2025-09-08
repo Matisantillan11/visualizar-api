@@ -30,6 +30,14 @@ export class UserController {
     return this.userService.getUser({ id });
   }
 
+  @Post('/search')
+  @ApiOperation({ summary: 'Get a user by email' })
+  @ApiResponse({ status: 200, description: 'Get a user by email' })
+  getUserByEmail(@Body() where: { email: string }): Promise<User | null> {
+    const { email } = where;
+    return this.userService.getUser({ email });
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a user' })
   @ApiResponse({ status: 201, description: 'Create a user' })
