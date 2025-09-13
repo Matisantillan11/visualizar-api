@@ -7,17 +7,19 @@ import { AuthorModule } from './modules/author/author.module';
 import { StudentsModule } from './modules/students/students.module';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
 import { CourseModule } from './modules/course/course.module';
+import { TeachersModule } from './modules/teachers/teachers.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ',,/.env',
+      envFilePath: '../.env',
     }),
     AuthorModule,
+    CourseModule,
     InstitutionsModule,
     StudentsModule,
+    TeachersModule,
     UserModule,
-    CourseModule,
   ],
   controllers: [AppController],
   providers: [AppService],
