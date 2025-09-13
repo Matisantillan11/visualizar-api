@@ -146,6 +146,7 @@ model Book {
   //relations
   bookCourse BookCourse[]
   bookAuthor BookAuthor[]
+  bookCategory BookCategory[]
 }
 
 model BookCourse {
@@ -174,4 +175,30 @@ model BookAuthor {
   //relations
   book Book @relation(fields: [bookId], references: [id])
   author Author @relation(fields: [authorId], references: [id])
+}
+
+model Category {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  name String
+
+  //relations
+  bookCategory BookCategory[]
+}
+
+model BookCategory {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  bookId String
+  categoryId String
+
+  //relations
+  book Book @relation(fields: [bookId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
 }

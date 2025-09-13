@@ -20,7 +20,7 @@ export class BooksController {
   @ApiOperation({ summary: 'Get all books' })
   @ApiResponse({ status: 200, description: 'Get all books' })
   getBooks(): Promise<Book[]> {
-    return this.booksService.getCourses();
+    return this.booksService.getBooks();
   }
 
   @Get('/:id')
@@ -35,7 +35,11 @@ export class BooksController {
   @ApiResponse({ status: 201, description: 'Create an book' })
   createBook(
     @Body()
-    book: Prisma.BookCreateInput & { courseId: string; authorId: string },
+    book: Prisma.BookCreateInput & {
+      courseId: string;
+      authorId: string;
+      categoryId: string;
+    },
   ): Promise<Book> {
     return this.booksService.createBook(book);
   }
@@ -45,7 +49,12 @@ export class BooksController {
   @ApiResponse({ status: 200, description: 'Update an book' })
   updateBook(
     @Param('id') id: string,
-    @Body() book: Prisma.BookUpdateInput,
+    @Body()
+    book: Prisma.BookUpdateInput & {
+      courseId: string;
+      authorId: string;
+      categoryId: string;
+    },
   ): Promise<Book> {
     return this.booksService.updateBook({ where: { id }, data: book });
   }

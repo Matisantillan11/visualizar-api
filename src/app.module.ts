@@ -9,6 +9,7 @@ import { InstitutionsModule } from './modules/institutions/institutions.module';
 import { CourseModule } from './modules/course/course.module';
 import { TeachersModule } from './modules/teachers/teachers.module';
 import { BooksModule } from './modules/books/books.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { BooksModule } from './modules/books/books.module';
     }),
     AuthorModule,
     BooksModule,
+    CategoriesModule,
     CourseModule,
     InstitutionsModule,
     StudentsModule,
