@@ -82,6 +82,7 @@ model Course {
 
   //relations
   InstitutionCourse InstitutionCourse[]
+  TeacherCourse TeacherCourse[]
 }
 
 
@@ -108,6 +109,7 @@ model Teacher {
 
   user   User   @relation(fields: [userId], references: [id])
   userId String @unique
+  teacherCourse TeacherCourse[]
 }
 
 model TeacherCourse {
@@ -118,4 +120,8 @@ model TeacherCourse {
 
   teacherId String
   courseId String
+
+  //relations
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
 }

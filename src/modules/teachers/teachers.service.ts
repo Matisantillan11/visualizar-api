@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, Teacher } from '@prisma/client';
+import { Prisma, Teacher, TeacherCourse } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 
 @Injectable()
@@ -20,7 +20,16 @@ export class TeachersService {
   async getTeachers(): Promise<Teacher[]> {
     return await this.prisma.teacher.findMany({
       include: {
-        user: true,
+        teacherCourse: {
+          include: {
+            teacher: {
+              include: {
+                user: true,
+              },
+            },
+            course: true,
+          },
+        },
       },
     });
   }
@@ -39,5 +48,31 @@ export class TeachersService {
 
   async deleteTeacher(where: Prisma.TeacherWhereUniqueInput): Promise<Teacher> {
     return await this.prisma.teacher.delete({ where });
+  }
+
+  async assignCourseToTeacher(params: {
+    data: {
+      teacherId: string;
+      courseId: string;
+    };
+  }): Promise<TeacherCourse> {
+    const { data } = params;
+    if (!data) {
+      throw new Error('Teacher not found');
+    }
+
+    const teacher = await this.getTeacher({ id: data.teacherId });
+    if (!teacher) {
+      throw new Error('Teacher not found');
+    }
+
+    const course = await this.prisma.course.findUnique({
+      where: { id: data.courseId },
+    });
+    if (!course) {
+      throw new Error('Course not found');
+    }
+
+    return await this.prisma.teacherCourse.create({ data });
   }
 }

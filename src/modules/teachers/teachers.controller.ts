@@ -7,7 +7,7 @@ import {
   Get,
   Param,
 } from '@nestjs/common';
-import { Prisma, Teacher } from '@prisma/client';
+import { Prisma, Teacher, TeacherCourse } from '@prisma/client';
 import { TeachersService } from './teachers.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
@@ -52,5 +52,16 @@ export class TeachersController {
   @ApiResponse({ status: 200, description: 'Delete an teachers' })
   deleteTeacher(@Param('id') id: string): Promise<Teacher> {
     return this.teacherService.deleteTeacher({ id });
+  }
+
+  @Post('/assign-course')
+  @ApiOperation({ summary: 'Assign a course to a teacher' })
+  @ApiResponse({ status: 201, description: 'Assign a course to a teacher' })
+  assignCourseToTeacher(
+    @Body() data: { teacherId: string; courseId: string },
+  ): Promise<TeacherCourse> {
+    return this.teacherService.assignCourseToTeacher({
+      data,
+    });
   }
 }
