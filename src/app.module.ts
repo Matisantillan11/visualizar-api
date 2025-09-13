@@ -8,6 +8,7 @@ import { StudentsModule } from './modules/students/students.module';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
 import { CourseModule } from './modules/course/course.module';
 import { TeachersModule } from './modules/teachers/teachers.module';
+import { BooksModule } from './modules/books/books.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { TeachersModule } from './modules/teachers/teachers.module';
       envFilePath: '../.env',
     }),
     AuthorModule,
+    BooksModule,
     CourseModule,
     InstitutionsModule,
     StudentsModule,

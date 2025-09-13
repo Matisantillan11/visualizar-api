@@ -45,6 +45,9 @@ model Author {
   name String
   biography String?
   imageUrl  String?
+
+  //relations
+  bookAuthor BookAuthor[]
 }
 
 model Student {
@@ -83,6 +86,7 @@ model Course {
   //relations
   InstitutionCourse InstitutionCourse[]
   TeacherCourse TeacherCourse[]
+  BookCourse BookCourse[]
 }
 
 
@@ -124,4 +128,50 @@ model TeacherCourse {
   //relations
   teacher Teacher @relation(fields: [teacherId], references: [id])
   course Course @relation(fields: [courseId], references: [id])
+}
+
+model Book {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  name String
+  description String
+  imageUrl String
+  animationFolderName String
+  is3dEnabled Boolean
+  releaseDate DateTime?
+
+  //relations
+  bookCourse BookCourse[]
+  bookAuthor BookAuthor[]
+}
+
+model BookCourse {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  bookId String
+  courseId String
+
+  //relations
+  book Book @relation(fields: [bookId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+}
+
+model BookAuthor {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  bookId String
+  authorId String
+
+  //relations
+  book Book @relation(fields: [bookId], references: [id])
+  author Author @relation(fields: [authorId], references: [id])
 }
