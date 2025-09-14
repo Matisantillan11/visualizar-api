@@ -6,17 +6,29 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { InstitutionsService } from './institutions.service';
-import { Institution, Prisma } from '@prisma/client';
+import { Institution, Prisma, Role } from '@prisma/client';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('/api/institutions')
 @ApiTags('Institutions')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class InstitutionsController {
   constructor(private readonly institutionService: InstitutionsService) {}
 
   @Get()
+  @Roles(Role.ADMIN, Role.INSTITUTION)
   @ApiOperation({ summary: 'Get all institutions' })
   @ApiResponse({ status: 200, description: 'Get all institutions' })
   getInstitutions(): Promise<Institution[]> {
@@ -24,6 +36,7 @@ export class InstitutionsController {
   }
 
   @Get('/:id')
+  @Roles(Role.ADMIN, Role.TEACHER, Role.INSTITUTION, Role.STUDENT)
   @ApiOperation({ summary: 'Get a institution by id' })
   @ApiResponse({ status: 200, description: 'Get a institution by id' })
   getUser(@Param('id') id: string): Promise<Institution | null> {
@@ -31,6 +44,7 @@ export class InstitutionsController {
   }
 
   @Post()
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Create a institution' })
   @ApiResponse({ status: 201, description: 'Create a institution' })
   createInstitution(
@@ -40,6 +54,7 @@ export class InstitutionsController {
   }
 
   @Put('/:id')
+  @Roles(Role.ADMIN, Role.INSTITUTION)
   @ApiOperation({ summary: 'Update a institution' })
   @ApiResponse({ status: 200, description: 'Update a institution' })
   updateInstitution(
@@ -53,6 +68,7 @@ export class InstitutionsController {
   }
 
   @Delete('/:id')
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Delete a institution' })
   @ApiResponse({ status: 200, description: 'Delete a institution' })
   deleteInstitution(@Param('id') id: string): Promise<Institution> {

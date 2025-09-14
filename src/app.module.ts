@@ -10,12 +10,15 @@ import { CourseModule } from './modules/course/course.module';
 import { TeachersModule } from './modules/teachers/teachers.module';
 import { BooksModule } from './modules/books/books.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: '../.env',
+      isGlobal: true,
     }),
+    AuthModule,
     AuthorModule,
     BooksModule,
     CategoriesModule,
