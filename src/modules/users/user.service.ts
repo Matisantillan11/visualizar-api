@@ -11,12 +11,19 @@ export class UsersService {
   ): Promise<User | null> {
     console.log(userWhereUniqueInput);
     return this.prisma.user.findUnique({
-      where: userWhereUniqueInput,
+      where: {
+        ...userWhereUniqueInput,
+        deletedAt: null,
+      },
     });
   }
 
   async getUsers(): Promise<User[]> {
-    return this.prisma.user.findMany();
+    return this.prisma.user.findMany({
+      where: {
+        deletedAt: null,
+      },
+    });
   }
 
   async createUser(data: Prisma.UserCreateInput): Promise<User> {
@@ -37,8 +44,11 @@ export class UsersService {
   }
 
   async deleteUser(where: Prisma.UserWhereUniqueInput): Promise<User> {
-    return this.prisma.user.delete({
+    return this.prisma.user.update({
       where,
+      data: {
+        deletedAt: new Date(),
+      },
     });
   }
 }

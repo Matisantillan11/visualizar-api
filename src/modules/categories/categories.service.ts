@@ -10,12 +10,19 @@ export class CategoriesService {
     categoryWhereUniqueInput: Prisma.CategoryWhereUniqueInput,
   ): Promise<Category | null> {
     return this.prisma.category.findUnique({
-      where: categoryWhereUniqueInput,
+      where: {
+        ...categoryWhereUniqueInput,
+        deletedAt: null,
+      },
     });
   }
 
   async getCategories(): Promise<Category[]> {
-    return this.prisma.category.findMany();
+    return this.prisma.category.findMany({
+      where: {
+        deletedAt: null,
+      },
+    });
   }
 
   async createCategory(data: Prisma.CategoryCreateInput): Promise<Category> {
@@ -33,6 +40,11 @@ export class CategoriesService {
   async deleteCategory(
     where: Prisma.CategoryWhereUniqueInput,
   ): Promise<Category> {
-    return this.prisma.category.delete({ where });
+    return this.prisma.category.update({
+      where,
+      data: {
+        deletedAt: new Date(),
+      },
+    });
   }
 }

@@ -10,12 +10,19 @@ export class AuthorService {
     authorWhereUniqueInput: Prisma.AuthorWhereUniqueInput,
   ): Promise<Author | null> {
     return this.prisma.author.findUnique({
-      where: authorWhereUniqueInput,
+      where: {
+        ...authorWhereUniqueInput,
+        deletedAt: null,
+      },
     });
   }
 
   async getAuthors(): Promise<Author[]> {
-    return this.prisma.author.findMany({});
+    return this.prisma.author.findMany({
+      where: {
+        deletedAt: null,
+      },
+    });
   }
 
   async createAuthor(data: Prisma.AuthorCreateInput): Promise<Author> {
@@ -31,6 +38,11 @@ export class AuthorService {
   }
 
   async deleteAuthor(where: Prisma.AuthorWhereUniqueInput): Promise<Author> {
-    return this.prisma.author.delete({ where });
+    return this.prisma.author.update({
+      where,
+      data: {
+        deletedAt: new Date(),
+      },
+    });
   }
 }

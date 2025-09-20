@@ -10,7 +10,10 @@ export class BooksService {
     bookWhereUniqueInput: Prisma.BookWhereUniqueInput,
   ): Promise<Book | null> {
     return this.prisma.book.findUnique({
-      where: bookWhereUniqueInput,
+      where: {
+        ...bookWhereUniqueInput,
+        deletedAt: null,
+      },
       include: {
         bookCourse: {
           include: {
@@ -33,6 +36,9 @@ export class BooksService {
 
   async getBooks(): Promise<Book[]> {
     return this.prisma.book.findMany({
+      where: {
+        deletedAt: null,
+      },
       include: {
         bookCourse: {
           include: {
@@ -75,7 +81,7 @@ export class BooksService {
     const { courseId, authorId, categoryId, ...bookData } = data;
 
     const course = await this.prisma.course.findUnique({
-      where: { id: courseId },
+      where: { id: courseId, deletedAt: null },
     });
 
     if (!course) {
@@ -83,7 +89,7 @@ export class BooksService {
     }
 
     const author = await this.prisma.author.findUnique({
-      where: { id: authorId },
+      where: { id: authorId, deletedAt: null },
     });
 
     if (!author) {
@@ -91,7 +97,7 @@ export class BooksService {
     }
 
     const category = await this.prisma.category.findUnique({
-      where: { id: categoryId },
+      where: { id: categoryId, deletedAt: null },
     });
 
     if (!category) {
@@ -153,7 +159,7 @@ export class BooksService {
 
     const { courseId, authorId, categoryId, ...bookData } = data;
     const course = await this.prisma.course.findUnique({
-      where: { id: courseId },
+      where: { id: courseId, deletedAt: null },
     });
 
     if (!course) {
@@ -161,7 +167,7 @@ export class BooksService {
     }
 
     const author = await this.prisma.author.findUnique({
-      where: { id: authorId },
+      where: { id: authorId, deletedAt: null },
     });
 
     if (!author) {
@@ -169,7 +175,7 @@ export class BooksService {
     }
 
     const category = await this.prisma.category.findUnique({
-      where: { id: categoryId },
+      where: { id: categoryId, deletedAt: null },
     });
 
     if (!category) {
@@ -209,6 +215,11 @@ export class BooksService {
   }
 
   async deleteBook(where: Prisma.BookWhereUniqueInput): Promise<Book> {
-    return this.prisma.book.delete({ where });
+    return this.prisma.book.update({
+      where,
+      data: {
+        deletedAt: new Date(),
+      },
+    });
   }
 }

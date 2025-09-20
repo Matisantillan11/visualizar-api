@@ -10,7 +10,10 @@ export class StudentsService {
     studentWhereUniqueInput: Prisma.StudentWhereUniqueInput,
   ): Promise<Student | null> {
     return this.prisma.student.findUnique({
-      where: studentWhereUniqueInput,
+      where: {
+        ...studentWhereUniqueInput,
+        deletedAt: null,
+      },
       include: {
         user: {
           select: {
@@ -25,6 +28,9 @@ export class StudentsService {
 
   async getStudents(): Promise<Student[]> {
     return this.prisma.student.findMany({
+      where: {
+        deletedAt: null,
+      },
       include: {
         user: {
           select: {
@@ -50,6 +56,11 @@ export class StudentsService {
   }
 
   async deleteStudent(where: Prisma.StudentWhereUniqueInput): Promise<Student> {
-    return this.prisma.student.delete({ where });
+    return this.prisma.student.update({
+      where,
+      data: {
+        deletedAt: new Date(),
+      },
+    });
   }
 }

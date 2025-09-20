@@ -10,12 +10,19 @@ export class InstitutionsService {
     institutionWhereUniqueInput: Prisma.InstitutionWhereUniqueInput,
   ): Promise<Institution | null> {
     return this.prisma.institution.findUnique({
-      where: institutionWhereUniqueInput,
+      where: {
+        ...institutionWhereUniqueInput,
+        deletedAt: null,
+      },
     });
   }
 
   async getInstitutions(): Promise<Institution[]> {
-    return this.prisma.institution.findMany();
+    return this.prisma.institution.findMany({
+      where: {
+        deletedAt: null,
+      },
+    });
   }
 
   async createInstitution(
@@ -40,8 +47,11 @@ export class InstitutionsService {
   async deleteInstitution(
     where: Prisma.InstitutionWhereUniqueInput,
   ): Promise<Institution> {
-    return this.prisma.institution.delete({
+    return this.prisma.institution.update({
       where,
+      data: {
+        deletedAt: new Date(),
+      },
     });
   }
 }

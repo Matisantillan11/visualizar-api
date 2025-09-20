@@ -27,6 +27,14 @@ import { Roles } from '../auth/decorators/roles.decorator';
 export class UserController {
   constructor(private readonly userService: UsersService) {}
 
+  @Get('/')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({ status: 200, description: 'Get all users' })
+  getUsers(): Promise<User[]> {
+    return this.userService.getUsers();
+  }
+
   @Get('/:id')
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
   @ApiOperation({ summary: 'Get a user by id' })

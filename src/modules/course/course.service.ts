@@ -10,12 +10,19 @@ export class CourseService {
     courseWhereUniqueInput: Prisma.CourseWhereUniqueInput,
   ): Promise<Course | null> {
     return this.prisma.course.findUnique({
-      where: courseWhereUniqueInput,
+      where: {
+        ...courseWhereUniqueInput,
+        deletedAt: null,
+      },
     });
   }
 
   async getCourses(): Promise<Course[]> {
-    return this.prisma.course.findMany({});
+    return this.prisma.course.findMany({
+      where: {
+        deletedAt: null,
+      },
+    });
   }
 
   async createCourse(
@@ -52,6 +59,11 @@ export class CourseService {
   }
 
   async deleteCourse(where: Prisma.CourseWhereUniqueInput): Promise<Course> {
-    return this.prisma.course.delete({ where });
+    return this.prisma.course.update({
+      where,
+      data: {
+        deletedAt: new Date(),
+      },
+    });
   }
 }

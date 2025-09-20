@@ -10,7 +10,10 @@ export class TeachersService {
     teacherWhereUniqueInput: Prisma.TeacherWhereUniqueInput,
   ): Promise<Teacher | null> {
     return await this.prisma.teacher.findUnique({
-      where: teacherWhereUniqueInput,
+      where: {
+        ...teacherWhereUniqueInput,
+        deletedAt: null,
+      },
       include: {
         user: true,
       },
@@ -19,6 +22,9 @@ export class TeachersService {
 
   async getTeachers(): Promise<Teacher[]> {
     return await this.prisma.teacher.findMany({
+      where: {
+        deletedAt: null,
+      },
       include: {
         teacherCourse: {
           include: {
@@ -47,7 +53,12 @@ export class TeachersService {
   }
 
   async deleteTeacher(where: Prisma.TeacherWhereUniqueInput): Promise<Teacher> {
-    return await this.prisma.teacher.delete({ where });
+    return await this.prisma.teacher.update({
+      where,
+      data: {
+        deletedAt: new Date(),
+      },
+    });
   }
 
   async assignCourseToTeacher(params: {
@@ -67,7 +78,7 @@ export class TeachersService {
     }
 
     const course = await this.prisma.course.findUnique({
-      where: { id: data.courseId },
+      where: { id: data.courseId, deletedAt: null },
     });
     if (!course) {
       throw new Error('Course not found');
