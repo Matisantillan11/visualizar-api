@@ -9,7 +9,6 @@ import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { AuthenticatedUser } from '../types/user.interface';
-import { HttpArgumentsHost } from '@nestjs/common/interfaces';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -25,7 +24,9 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const request: HttpArgumentsHost = context.switchToHttp().getRequest();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const request = context.switchToHttp().getRequest();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const user = request.user as AuthenticatedUser;
 
     // Additional security check - ensure user exists and has required properties
