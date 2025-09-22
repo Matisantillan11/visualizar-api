@@ -11,6 +11,7 @@ import { TeachersModule } from './modules/teachers/teachers.module';
 import { BooksModule } from './modules/books/books.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { SharedAuthModule } from './shared/auth/shared-auth.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuthModule } from './modules/auth/auth.module';
       envFilePath: '../.env',
       isGlobal: true,
     }),
+    SharedAuthModule,
     AuthModule,
     AuthorModule,
     BooksModule,

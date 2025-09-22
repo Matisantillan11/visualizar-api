@@ -7,8 +7,3 @@ export interface AuthenticatedUser {
   role: Role;
   supabaseUserId: string;
 }
-
-export interface JwtError {
-  name: string;
-  message: string;
-}

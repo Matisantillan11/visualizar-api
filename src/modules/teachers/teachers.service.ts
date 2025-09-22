@@ -28,14 +28,10 @@ export class TeachersService {
       include: {
         teacherCourse: {
           include: {
-            teacher: {
-              include: {
-                user: true,
-              },
-            },
             course: true,
           },
         },
+        user: true,
       },
     });
   }
