@@ -78,15 +78,12 @@ export class SupabaseService {
   async getUserFromToken(accessToken: string) {
     // Set the session with the access token
     const { data: sessionData, error: sessionError } =
-      await this.supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: '', // We'll only use access token for verification
-      });
+      await this.supabase.auth.getUser(accessToken);
 
     if (sessionError) {
       throw new Error(`Invalid session: ${sessionError.message}`);
     }
 
-    return sessionData.user;
+    return sessionData?.user;
   }
 }
