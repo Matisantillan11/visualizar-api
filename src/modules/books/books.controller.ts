@@ -1,24 +1,24 @@
 import {
-  Controller,
-  Post,
   Body,
-  Put,
+  Controller,
   Delete,
   Get,
   Param,
+  Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
-import { Book, Prisma, Role } from '@prisma/client';
-import { BooksService } from './books.service';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
-  ApiBearerAuth,
 } from '@nestjs/swagger';
+import { type Book, Prisma, Role } from '@prisma/client';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { BooksService } from './books.service';
 
 @Controller('/api/books')
 @ApiTags('Books')

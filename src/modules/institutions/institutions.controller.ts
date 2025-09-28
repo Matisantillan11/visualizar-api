@@ -9,16 +9,16 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
-  ApiBearerAuth,
 } from '@nestjs/swagger';
-import { InstitutionsService } from './institutions.service';
-import { Institution, Prisma, Role } from '@prisma/client';
+import { type Institution, Prisma, Role } from '@prisma/client';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { InstitutionsService } from './institutions.service';
 
 @Controller('/api/institutions')
 @ApiTags('Institutions')

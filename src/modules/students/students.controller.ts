@@ -1,24 +1,24 @@
 import {
-  Controller,
-  Post,
   Body,
-  Put,
+  Controller,
   Delete,
   Get,
   Param,
+  Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
-import { Student, Prisma, Role } from '@prisma/client';
-import { StudentsService } from './students.service';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
-  ApiBearerAuth,
 } from '@nestjs/swagger';
+import { type Student, Prisma, Role } from '@prisma/client';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { StudentsService } from './students.service';
 
 @Controller('/api/students')
 @ApiTags('Students')
