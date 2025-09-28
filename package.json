@@ -21,7 +21,8 @@
     "prisma:migrate": "npx dotenv -e ./.env -- prisma migrate dev",
     "prisma:migrate:reset": "npx dotenv -e ./.env -- prisma migrate reset",
     "prisma:push": "npx dotenv -e ./.env -- prisma db push",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
