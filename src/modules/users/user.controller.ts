@@ -8,17 +8,17 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
-import { UsersService } from './user.service';
-import { Prisma, type User, Role } from '@prisma/client';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
-  ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Prisma, Role, type User } from 'src/shared/database/generated/client';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { UsersService } from './user.service';
 
 @Controller('/api/users')
 @ApiTags('Users')

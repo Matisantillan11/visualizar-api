@@ -14,7 +14,12 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Prisma, Role, type Teacher, type TeacherCourse } from '@prisma/client';
+import {
+  Prisma,
+  Role,
+  type Teacher,
+  type TeacherCourse,
+} from 'src/shared/database/generated/client';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
