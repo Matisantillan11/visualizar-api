@@ -1,7 +1,7 @@
-import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,14 +14,16 @@ async function bootstrap() {
     }),
   );
 
-  app.enableCors({
+  app.enableCors(/* {
     origin: [
       'http://localhost:3000',
+      'exp://192.168.1.12:8081',
+      'http://localhost:8081',
       'https://visualizar-next-dashboard.vercel.app',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Authorization',
-  });
+  } */);
 
   const config = new DocumentBuilder()
     .setTitle('Visualizar')

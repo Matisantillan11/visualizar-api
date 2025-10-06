@@ -1,14 +1,14 @@
 import {
+  BadRequestException,
   Injectable,
   UnauthorizedException,
-  BadRequestException,
 } from '@nestjs/common';
+import { SupabaseService } from '../../shared/providers/supabase.service';
 import { UsersService } from '../users/user.service';
+import { AuthResponseDto, SendOtpResponseDto } from './dto/auth-response.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
-import { AuthResponseDto, SendOtpResponseDto } from './dto/auth-response.dto';
 import { AuthenticatedUser } from './types/user.interface';
-import { SupabaseService } from '../../shared/providers/supabase.service';
 
 @Injectable()
 export class AuthService {
@@ -19,9 +19,12 @@ export class AuthService {
 
   async sendOtp(sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
     const { email } = sendOtpDto;
+    const emailToLowerCase = email.toLowerCase();
 
+    console.log(emailToLowerCase);
     // First, validate that the user exists in our local database
-    const user = await this.usersService.getUser({ email });
+    const user = await this.usersService.getUser({ email: emailToLowerCase });
+    console.log({ user });
 
     if (!user || user.deletedAt) {
       throw new UnauthorizedException(
@@ -31,11 +34,11 @@ export class AuthService {
 
     try {
       // Send OTP via Supabase
-      await this.supabaseService.sendOTP(email);
+      await this.supabaseService.sendOTP(emailToLowerCase);
 
       return {
         message: 'OTP sent successfully',
-        email,
+        email: emailToLowerCase,
       };
     } catch (error) {
       const err = error as Error;
@@ -46,9 +49,11 @@ export class AuthService {
   async verifyOtp(verifyOtpDto: VerifyOtpDto): Promise<AuthResponseDto> {
     const { email, token } = verifyOtpDto;
 
+    const emailToLowerCase = email.toLowerCase();
+    console.log({ email });
     // Validate that the user exists in our local database
-    const user = await this.usersService.getUser({ email });
-
+    const user = await this.usersService.getUser({ email: emailToLowerCase });
+    console.log({ user });
     if (!user || user.deletedAt) {
       throw new UnauthorizedException('User not found');
     }
@@ -56,9 +61,11 @@ export class AuthService {
     try {
       // Verify OTP with Supabase
       const supabaseAuthResult = await this.supabaseService.verifyOTP(
-        email,
+        emailToLowerCase,
         token,
       );
+
+      console.log({ supabaseAuthResult });
 
       if (!supabaseAuthResult.session || !supabaseAuthResult.user) {
         throw new UnauthorizedException('Invalid OTP or expired token');
@@ -88,6 +95,7 @@ export class AuthService {
       };
     } catch (error) {
       const err = error as Error;
+      console.log({ err });
       if (
         err.message.includes('Invalid OTP') ||
         err.message.includes('expired')

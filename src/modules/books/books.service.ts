@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, type Book } from 'src/shared/database/generated/client';
+import { Prisma, type Book } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 
 @Injectable()
@@ -78,8 +78,8 @@ export class BooksService {
       throw new Error('Category ID is required');
     }
 
-    const { courseId, authorId, categoryId, ...bookData } = data;
-
+    const { courseId, authorId, categoryId, releaseDate, ...bookData } = data;
+    console.log(releaseDate);
     const course = await this.prisma.course.findUnique({
       where: { id: courseId, deletedAt: null },
     });
@@ -105,7 +105,7 @@ export class BooksService {
     }
 
     const bookCreation = await this.prisma.book.create({
-      data: bookData,
+      data: { ...bookData, is3dEnabled: false },
     });
 
     if (bookCreation) {
