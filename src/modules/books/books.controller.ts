@@ -15,9 +15,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { type Book, Prisma, Role } from '@prisma/client';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import type { AuthenticatedUser } from '../auth/types/user.interface';
 import { BooksService } from './books.service';
 
 @Controller('/api/books')
@@ -31,8 +33,8 @@ export class BooksController {
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
   @ApiOperation({ summary: 'Get all books' })
   @ApiResponse({ status: 200, description: 'Get all books' })
-  getBooks(): Promise<Book[]> {
-    return this.booksService.getBooks();
+  getBooks(@CurrentUser() user: AuthenticatedUser): Promise<Book[]> {
+    return this.booksService.getBooks(user);
   }
 
   @Get('/:id')
@@ -80,5 +82,16 @@ export class BooksController {
   @ApiResponse({ status: 200, description: 'Delete an book' })
   deleteBook(@Param('id') id: string): Promise<Book> {
     return this.booksService.deleteBook({ id });
+  }
+
+  @Get('/course/:courseId')
+  @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
+  @ApiOperation({ summary: 'Get books of a course' })
+  @ApiResponse({ status: 200, description: 'Get books of a course' })
+  getBooksOfCourse(
+    @Param('courseId') courseId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Book[]> {
+    return this.booksService.getBooksByCourseId(courseId, user);
   }
 }

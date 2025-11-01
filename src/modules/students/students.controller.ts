@@ -14,7 +14,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { type Student, Prisma, Role } from '@prisma/client';
+import { Prisma, Role, type Student, type StudentCourse } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -68,5 +68,39 @@ export class StudentsController {
   @ApiResponse({ status: 200, description: 'Delete an students' })
   deleteStudent(@Param('id') id: string): Promise<Student> {
     return this.studentService.deleteStudent({ id });
+  }
+
+  @Post('/assign-course')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Assign courses to a student' })
+  @ApiResponse({ status: 201, description: 'Assign courses to a student' })
+  assignCourseToStudent(
+    @Body() data: { studentId: string; courseIds: Array<string> },
+  ): Promise<Array<StudentCourse>> {
+    return this.studentService.assignCourseToStudent({ data });
+  }
+
+  @Get('/:id/courses')
+  @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
+  @ApiOperation({ summary: 'Get courses assigned to a student' })
+  @ApiResponse({
+    status: 200,
+    description: 'Get courses assigned to a student',
+  })
+  getCoursesOfStudent(@Param('id') id: string): Promise<Array<any>> {
+    return this.studentService.getCoursesOfStudent(id);
+  }
+
+  @Delete('/:studentId/courses/:courseId')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Remove a student from a course' })
+  @ApiResponse({ status: 200, description: 'Remove a student from a course' })
+  removeStudentFromCourse(
+    @Param('studentId') studentId: string,
+    @Param('courseId') courseId: string,
+  ): Promise<StudentCourse> {
+    return this.studentService.removeStudentFromCourse({
+      data: { studentId, courseId },
+    });
   }
 }

@@ -75,8 +75,8 @@ export class TeachersController {
   @ApiOperation({ summary: 'Assign a course to a teacher' })
   @ApiResponse({ status: 201, description: 'Assign a course to a teacher' })
   assignCourseToTeacher(
-    @Body() data: { teacherId: string; courseId: string },
-  ): Promise<TeacherCourse> {
+    @Body() data: { teacherId: string; courseIds: Array<string> },
+  ): Promise<Array<TeacherCourse>> {
     return this.teacherService.assignCourseToTeacher({
       data,
     });

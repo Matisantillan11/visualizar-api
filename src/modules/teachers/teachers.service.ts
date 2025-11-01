@@ -60,12 +60,12 @@ export class TeachersService {
   async assignCourseToTeacher(params: {
     data: {
       teacherId: string;
-      courseId: string;
+      courseIds: Array<string>;
     };
-  }): Promise<TeacherCourse> {
+  }): Promise<Array<TeacherCourse>> {
     const { data } = params;
-    if (!data) {
-      throw new Error('Teacher not found');
+    if (!data.teacherId || !data.courseIds) {
+      throw new Error('Teacher or courseIds not found');
     }
 
     const teacher = await this.getTeacher({ id: data.teacherId });
@@ -73,13 +73,32 @@ export class TeachersService {
       throw new Error('Teacher not found');
     }
 
-    const course = await this.prisma.course.findUnique({
-      where: { id: data.courseId, deletedAt: null },
+    console.log({ ids: data.courseIds });
+
+    const courses = await this.prisma.course.findMany({
+      where: {
+        deletedAt: null,
+        id: {
+          in: data.courseIds,
+        },
+      },
     });
-    if (!course) {
+
+    console.log({ courses });
+
+    if (!courses) {
       throw new Error('Course not found');
     }
 
-    return await this.prisma.teacherCourse.create({ data });
+    const payload = courses.map((course) => ({
+      teacherId: data.teacherId,
+      courseId: course.id,
+    }));
+
+    const teacherCourses = await this.prisma.teacherCourse.createManyAndReturn({
+      data: payload,
+    });
+
+    return teacherCourses;
   }
 }

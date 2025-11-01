@@ -3,7 +3,10 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { SupabaseService } from '../../shared/providers/supabase.service';
+import { StudentsService } from '../students/students.service';
+import { TeachersService } from '../teachers/teachers.service';
 import { UsersService } from '../users/user.service';
 import { AuthResponseDto, SendOtpResponseDto } from './dto/auth-response.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
@@ -14,6 +17,8 @@ import { AuthenticatedUser } from './types/user.interface';
 export class AuthService {
   constructor(
     private usersService: UsersService,
+    private teachersService: TeachersService,
+    private studentsService: StudentsService,
     private supabaseService: SupabaseService,
   ) {}
 
@@ -21,10 +26,8 @@ export class AuthService {
     const { email } = sendOtpDto;
     const emailToLowerCase = email.toLowerCase();
 
-    console.log(emailToLowerCase);
     // First, validate that the user exists in our local database
     const user = await this.usersService.getUser({ email: emailToLowerCase });
-    console.log({ user });
 
     if (!user || user.deletedAt) {
       throw new UnauthorizedException(
@@ -50,10 +53,8 @@ export class AuthService {
     const { email, token } = verifyOtpDto;
 
     const emailToLowerCase = email.toLowerCase();
-    console.log({ email });
     // Validate that the user exists in our local database
     const user = await this.usersService.getUser({ email: emailToLowerCase });
-    console.log({ user });
     if (!user || user.deletedAt) {
       throw new UnauthorizedException('User not found');
     }
@@ -65,7 +66,9 @@ export class AuthService {
         token,
       );
 
-      console.log({ supabaseAuthResult });
+      console.log({
+        supabaseAuthResult: supabaseAuthResult.user?.app_metadata,
+      });
 
       if (!supabaseAuthResult.session || !supabaseAuthResult.user) {
         throw new UnauthorizedException('Invalid OTP or expired token');
@@ -80,6 +83,57 @@ export class AuthService {
           where: { id: user.id },
           data: { supabaseUserId: supabaseAuthResult.user.id },
         });
+      }
+
+      const isTeacher = user.role === Role.TEACHER;
+      const isStudent = user.role === Role.STUDENT;
+
+      if (isTeacher) {
+        const teacher = await this.teachersService.getTeacher({
+          userId: user.id,
+        });
+
+        if (!teacher) {
+          throw new UnauthorizedException('Teacher not found');
+        }
+
+        return {
+          access_token: supabaseAuthResult.session.access_token,
+          refresh_token: supabaseAuthResult.session.refresh_token,
+          user: {
+            id: user.id,
+            teacherId: teacher.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            supabaseUserId: supabaseAuthResult.user.id,
+          },
+        };
+      }
+
+      if (isStudent) {
+        const student = await this.studentsService.getStudent({
+          userId: user.id,
+        });
+
+        if (!student) {
+          throw new UnauthorizedException('Student not found');
+        }
+
+        return {
+          access_token: supabaseAuthResult.session.access_token,
+          refresh_token: supabaseAuthResult.session.refresh_token,
+          user: {
+            id: user.id,
+            studentId: student.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            supabaseUserId: supabaseAuthResult.user.id,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            avatar: supabaseAuthResult?.session?.user.user_metadata.avatar_url,
+          },
+        };
       }
 
       return {

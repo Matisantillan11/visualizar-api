@@ -66,4 +66,25 @@ export class CourseService {
       },
     });
   }
+
+  async getCoursesOfTeacher(teacherId: string): Promise<Course[]> {
+    const coursesAssigned = await this.prisma.teacherCourse.findMany({
+      select: {
+        courseId: true,
+      },
+      where: {
+        deletedAt: null,
+        teacherId,
+      },
+    });
+
+    const courses = await this.prisma.course.findMany({
+      where: {
+        deletedAt: null,
+        id: { in: coursesAssigned.map((course) => course.courseId) },
+      },
+    });
+
+    return courses;
+  }
 }

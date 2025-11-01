@@ -19,10 +19,14 @@ export class AuthResponseDto {
   })
   user: {
     id: string;
+    teacherId?: string;
+    studentId?: string;
+    institutionId?: string;
     email: string;
     name: string | null;
     role: Role;
     supabaseUserId: string;
+    avatar?: any;
   };
 }
 

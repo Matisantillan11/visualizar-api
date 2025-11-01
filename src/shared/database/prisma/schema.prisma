@@ -60,6 +60,7 @@ model Student {
 
   user   User   @relation(fields: [userId], references: [id])
   userId String @unique
+  studentCourse StudentCourse[]
 }
 
 model Institution {
@@ -89,6 +90,7 @@ model Course {
   InstitutionCourse InstitutionCourse[]
   TeacherCourse TeacherCourse[]
   BookCourse BookCourse[]
+  StudentCourse StudentCourse[]
 }
 
 
@@ -129,6 +131,20 @@ model TeacherCourse {
 
   //relations
   teacher Teacher @relation(fields: [teacherId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+}
+
+model StudentCourse {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  studentId String
+  courseId String
+
+  //relations
+  student Student @relation(fields: [studentId], references: [id])
   course Course @relation(fields: [courseId], references: [id])
 }
 

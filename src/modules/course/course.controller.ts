@@ -71,4 +71,14 @@ export class CourseController {
   deleteCourse(@Param('id') id: string): Promise<Course> {
     return this.courseService.deleteCourse({ id });
   }
+
+  @Get('/teacher/:teacherId')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Get courses of a teacher' })
+  @ApiResponse({ status: 200, description: 'Get courses of a teacher' })
+  getCoursesOfTeacher(
+    @Param('teacherId') teacherId: string,
+  ): Promise<Course[]> {
+    return this.courseService.getCoursesOfTeacher(teacherId);
+  }
 }
