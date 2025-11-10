@@ -35,6 +35,7 @@ model User {
 
   student Student?
   teacher Teacher?
+  bookRequest BookRequest[]
 }
 
 
@@ -91,6 +92,7 @@ model Course {
   TeacherCourse TeacherCourse[]
   BookCourse BookCourse[]
   StudentCourse StudentCourse[]
+  BookRequestCourse BookRequestCourse[]
 }
 
 
@@ -157,7 +159,7 @@ model Book {
   name String
   description String
   imageUrl String
-  animationFolderName String
+  animations Json[] @default([]) 
   is3dEnabled Boolean
   releaseDate DateTime?
 
@@ -219,4 +221,40 @@ model BookCategory {
   //relations
   book Book @relation(fields: [bookId], references: [id])
   category Category @relation(fields: [categoryId], references: [id])
+}
+
+enum AnimationType {
+  ALL
+  MAIN
+  EXTRA
+}
+model BookRequest {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  userId String
+  title String
+  authorName String
+  comments String?
+  animations AnimationType[]
+
+  //relations
+  user User @relation(fields: [userId], references: [id])
+  bookRequestCourse BookRequestCourse[]
+}
+
+model BookRequestCourse {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  bookRequestId String
+  courseId String
+
+  //relations
+  bookRequest BookRequest @relation(fields: [bookRequestId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
 }

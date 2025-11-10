@@ -21,6 +21,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import type { AuthenticatedUser } from '../auth/types/user.interface';
 import { BooksService } from './books.service';
+import { CreateBookRequestDto } from './dto/create-book-request.dto';
 
 @Controller('/api/books')
 @ApiTags('Books')
@@ -93,5 +94,19 @@ export class BooksController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Book[]> {
     return this.booksService.getBooksByCourseId(courseId, user);
+  }
+
+  @Post('/request')
+  @Roles(Role.TEACHER)
+  @ApiOperation({ summary: 'Create a book request' })
+  @ApiResponse({
+    status: 201,
+    description: 'Book request created successfully',
+  })
+  createBookRequest(
+    @Body() createBookRequestDto: CreateBookRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.booksService.createBookRequest(createBookRequestDto, user);
   }
 }

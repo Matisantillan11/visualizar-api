@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, Role, type Book } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 import { AuthenticatedUser } from '../auth/types/user.interface';
+import { CreateBookRequestDto } from './dto/create-book-request.dto';
 
 @Injectable()
 export class BooksService {
@@ -428,5 +429,70 @@ export class BooksService {
     });
 
     return response.map(({ book }) => book).filter((book) => book !== null);
+  }
+
+  /**
+   * Create a book request from a teacher
+   *
+   * @param createBookRequestDto - The book request data
+   * @param user - The authenticated user (teacher)
+   * @returns Promise with the created book request
+   */
+  async createBookRequest(
+    createBookRequestDto: CreateBookRequestDto,
+    user: AuthenticatedUser,
+  ) {
+    const { courseIds, title, authorName, comments, animations } =
+      createBookRequestDto;
+
+    // Validate that all courses exist
+    const courses = await this.prisma.course.findMany({
+      where: {
+        id: { in: courseIds },
+        deletedAt: null,
+      },
+    });
+
+    if (courses.length !== courseIds.length) {
+      const foundCourseIds = courses.map((c) => c.id);
+      const missingCourseIds = courseIds.filter(
+        (id) => !foundCourseIds.includes(id),
+      );
+      throw new Error(`Courses not found: ${missingCourseIds.join(', ')}`);
+    }
+
+    // Validate that the user is a teacher
+    if (user.role !== Role.TEACHER) {
+      throw new Error('Only teachers can create book requests');
+    }
+
+    // Create the book request with course relations
+    // Using type assertion until Prisma client is regenerated
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const bookRequest = await (this.prisma as any).bookRequest.create({
+      data: {
+        userId: user.id,
+        title,
+        authorName,
+        comments,
+        animations,
+        bookRequestCourse: {
+          create: courseIds.map((courseId) => ({
+            courseId,
+          })),
+        },
+      },
+      include: {
+        user: true,
+        bookRequestCourse: {
+          include: {
+            course: true,
+          },
+        },
+      },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return bookRequest;
   }
 }
