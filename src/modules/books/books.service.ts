@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { Prisma, Role, type Book } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 import { AuthenticatedUser } from '../auth/types/user.interface';
@@ -6,6 +11,8 @@ import { CreateBookRequestDto } from './dto/create-book-request.dto';
 
 @Injectable()
 export class BooksService {
+  private readonly logger = new Logger(BooksService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async getBook(
@@ -442,57 +449,173 @@ export class BooksService {
     createBookRequestDto: CreateBookRequestDto,
     user: AuthenticatedUser,
   ) {
-    const { courseIds, title, authorName, comments, animations } =
-      createBookRequestDto;
-
-    // Validate that all courses exist
-    const courses = await this.prisma.course.findMany({
-      where: {
-        id: { in: courseIds },
-        deletedAt: null,
-      },
-    });
-
-    if (courses.length !== courseIds.length) {
-      const foundCourseIds = courses.map((c) => c.id);
-      const missingCourseIds = courseIds.filter(
-        (id) => !foundCourseIds.includes(id),
+    try {
+      this.logger.log(`Creating book request for userId: ${user.id}`);
+      console.log('📝 Creating book request for userId:', user.id);
+      console.log(
+        '📦 Request data:',
+        JSON.stringify(createBookRequestDto, null, 2),
       );
-      throw new Error(`Courses not found: ${missingCourseIds.join(', ')}`);
-    }
 
-    // Validate that the user is a teacher
-    if (user.role !== Role.TEACHER) {
-      throw new Error('Only teachers can create book requests');
-    }
+      const { courseIds, title, authorName, comments, animations } =
+        createBookRequestDto;
 
-    // Create the book request with course relations
-    // Using type assertion until Prisma client is regenerated
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const bookRequest = await (this.prisma as any).bookRequest.create({
-      data: {
-        userId: user.id,
-        title,
-        authorName,
-        comments,
-        animations,
-        bookRequestCourse: {
-          create: courseIds.map((courseId) => ({
-            courseId,
-          })),
+      // Validate that the user is a teacher
+      if (user.role !== Role.TEACHER) {
+        this.logger.warn(
+          `User ${user.id} attempted to create book request but is not a teacher`,
+        );
+        throw new BadRequestException('Only teachers can create book requests');
+      }
+
+      // Validate that all courses exist
+      const courses = await this.prisma.course.findMany({
+        where: {
+          id: { in: courseIds },
+          deletedAt: null,
         },
-      },
-      include: {
-        user: true,
-        bookRequestCourse: {
-          include: {
-            course: true,
+      });
+
+      if (courses.length !== courseIds.length) {
+        const foundCourseIds = courses.map((c) => c.id);
+        const missingCourseIds = courseIds.filter(
+          (id) => !foundCourseIds.includes(id),
+        );
+        throw new BadRequestException(
+          `Courses not found: ${missingCourseIds.join(', ')}`,
+        );
+      }
+
+      // Create the book request with course relations
+      this.logger.log(`Creating book request with ${courseIds.length} courses`);
+      console.log('🔗 Creating book request with courses:', courseIds);
+
+      const bookRequest = await this.prisma.bookRequest.create({
+        data: {
+          userId: user.id,
+          title,
+          authorName,
+          comments,
+          animations,
+          bookRequestCourse: {
+            create: courseIds.map((courseId) => ({
+              courseId,
+            })),
           },
         },
-      },
-    });
+        include: {
+          user: true,
+          bookRequestCourse: {
+            include: {
+              course: true,
+            },
+          },
+        },
+      });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return bookRequest;
+      this.logger.log(
+        `Book request created successfully with id: ${bookRequest.id}`,
+      );
+      console.log('✅ Book request created successfully:', bookRequest.id);
+      console.log(
+        '📋 Created book request data:',
+        JSON.stringify(bookRequest, null, 2),
+      );
+
+      return bookRequest;
+    } catch (error) {
+      // Re-throw NestJS exceptions as-is
+      if (
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
+      ) {
+        this.logger.error(`Book request creation failed: ${error.message}`);
+        console.error('❌ Book request creation failed:', error.message);
+        throw error;
+      }
+      // Wrap other errors
+      const err = error as Error;
+      this.logger.error(`Unexpected error creating book request:`, err);
+      console.error('❌ Unexpected error creating book request:', err);
+      throw new InternalServerErrorException(
+        `Failed to create book request: ${err.message}`,
+      );
+    }
+  }
+
+  /**
+   * Get all book requests for a specific user
+   *
+   * @param userId - The user ID to get book requests for
+   * @returns Promise with array of book requests
+   */
+  async getBookRequestsByUserId(user: AuthenticatedUser): Promise<any[]> {
+    try {
+      console.log(
+        '🟢 Service - getBookRequestsByUserId called with user:',
+        user,
+      );
+      this.logger.log(`Fetching book requests for userId: ${user.id}`);
+
+      if (!user || !user.id) {
+        throw new BadRequestException('User is required');
+      }
+
+      const bookRequests = await this.prisma.bookRequest.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+            },
+          },
+          bookRequestCourse: {
+            where: {
+              deletedAt: null,
+            },
+            include: {
+              course: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      this.logger.log(
+        `Found ${bookRequests.length} book requests for userId: ${user.id}`,
+      );
+      console.log('✅ Book requests found:', bookRequests.length);
+
+      // Ensure we always return an array, even if empty
+      return Array.isArray(bookRequests) ? bookRequests : [];
+    } catch (error) {
+      // Re-throw NestJS exceptions as-is
+      if (
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
+      ) {
+        console.error('❌ NestJS Exception:', error.message);
+        throw error;
+      }
+      // Wrap other errors
+      const err = error as Error;
+      this.logger.error(
+        `Failed to fetch book requests for userId ${user?.id}:`,
+        err.stack || err.message,
+      );
+      console.error('❌ Error fetching book requests:', err);
+      console.error('❌ Error stack:', err.stack);
+      throw new InternalServerErrorException(
+        `Failed to fetch book requests: ${err.message}`,
+      );
+    }
   }
 }

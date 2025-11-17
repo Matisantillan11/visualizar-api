@@ -38,6 +38,31 @@ export class BooksController {
     return this.booksService.getBooks(user);
   }
 
+  @Get('/requests')
+  @Roles(Role.TEACHER)
+  @ApiOperation({ summary: 'Get my book requests' })
+  @ApiResponse({
+    status: 200,
+    description: 'Get all book requests for the authenticated user',
+  })
+  async getMyBookRequests(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<any[]> {
+    console.log('🔵 Controller - getMyBookRequests called with user:', user);
+    return this.booksService.getBookRequestsByUserId(user);
+  }
+
+  @Get('/course/:courseId')
+  @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
+  @ApiOperation({ summary: 'Get books of a course' })
+  @ApiResponse({ status: 200, description: 'Get books of a course' })
+  getBooksOfCourse(
+    @Param('courseId') courseId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Book[]> {
+    return this.booksService.getBooksByCourseId(courseId, user);
+  }
+
   @Get('/:id')
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
   @ApiOperation({ summary: 'Get an book by id' })
@@ -83,17 +108,6 @@ export class BooksController {
   @ApiResponse({ status: 200, description: 'Delete an book' })
   deleteBook(@Param('id') id: string): Promise<Book> {
     return this.booksService.deleteBook({ id });
-  }
-
-  @Get('/course/:courseId')
-  @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get books of a course' })
-  @ApiResponse({ status: 200, description: 'Get books of a course' })
-  getBooksOfCourse(
-    @Param('courseId') courseId: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<Book[]> {
-    return this.booksService.getBooksByCourseId(courseId, user);
   }
 
   @Post('/request')
