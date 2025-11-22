@@ -3,11 +3,13 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Role, type Book } from '@prisma/client';
+import { BookRequestStatus, Prisma, Role, type Book } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 import { AuthenticatedUser } from '../auth/types/user.interface';
 import { CreateBookRequestDto } from './dto/create-book-request.dto';
+import { UpdateBookRequestStatusDto } from './dto/update-book-request-status.dto';
 
 @Injectable()
 export class BooksService {
@@ -546,7 +548,7 @@ export class BooksService {
   /**
    * Get all book requests for a specific user
    *
-   * @param userId - The user ID to get book requests for
+   * @param user - The user to get book requests for
    * @returns Promise with array of book requests
    */
   async getBookRequestsByUserId(user: AuthenticatedUser): Promise<any[]> {
@@ -615,6 +617,209 @@ export class BooksService {
       console.error('❌ Error stack:', err.stack);
       throw new InternalServerErrorException(
         `Failed to fetch book requests: ${err.message}`,
+      );
+    }
+  }
+
+  /**
+   * Get all book requests for a specific user
+   *
+   * @param user - The user to get book requests for
+   * @returns Promise with array of book requests
+   */
+  async getAllBookRequests(user: AuthenticatedUser): Promise<any[]> {
+    try {
+      console.log('🟢 Service - getAllBookRequests called with user:', user);
+      this.logger.log(`Fetching book requests for userId: ${user.id}`);
+
+      if (!user || !user.id) {
+        throw new BadRequestException('User is required');
+      }
+
+      if (user.role !== Role.ADMIN) {
+        throw new BadRequestException('Only admins can get all book requests');
+      }
+
+      const bookRequests = await this.prisma.bookRequest.findMany({
+        where: {
+          deletedAt: null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+            },
+          },
+          bookRequestCourse: {
+            where: {
+              deletedAt: null,
+            },
+            include: {
+              bookRequest: true,
+              course: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      this.logger.log(`Found ${bookRequests.length} book requests`);
+      console.log('✅ Book requests found:', bookRequests.length);
+
+      // Ensure we always return an array, even if empty
+      return Array.isArray(bookRequests) ? bookRequests : [];
+    } catch (error) {
+      // Re-throw NestJS exceptions as-is
+      if (
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
+      ) {
+        console.error('❌ NestJS Exception:', error.message);
+        throw error;
+      }
+      // Wrap other errors
+      const err = error as Error;
+      this.logger.error(
+        `Failed to fetch book requests:`,
+        err.stack || err.message,
+      );
+      console.error('❌ Error fetching book requests:', err);
+      console.error('❌ Error stack:', err.stack);
+      throw new InternalServerErrorException(
+        `Failed to fetch book requests: ${err.message}`,
+      );
+    }
+  }
+
+  /**
+   * Update the status of a book request with state transition validation
+   *
+   * State transition rules:
+   * - PENDING → APPROVED or DENIED
+   * - APPROVED → PUBLISHED
+   * - DENIED → (terminal state, no transitions allowed)
+   * - PUBLISHED → (terminal state, no transitions allowed)
+   *
+   * @param id - The book request ID
+   * @param updateDto - The new status
+   * @param user - The authenticated user (must be ADMIN)
+   * @returns Promise with the updated book request
+   */
+  async updateBookRequestStatus(
+    id: string,
+    updateDto: UpdateBookRequestStatusDto,
+    user: AuthenticatedUser,
+  ) {
+    try {
+      this.logger.log(
+        `Updating book request ${id} status to ${updateDto.status}`,
+      );
+
+      // Only admins can update book request status
+      if (user.role !== Role.ADMIN) {
+        throw new BadRequestException(
+          'Only admins can update book request status',
+        );
+      }
+
+      // Get the current book request
+      const bookRequest = await this.prisma.bookRequest.findUnique({
+        where: { id, deletedAt: null },
+      });
+
+      if (!bookRequest) {
+        throw new NotFoundException(`Book request with id ${id} not found`);
+      }
+
+      const currentStatus = bookRequest.status;
+      const newStatus = updateDto.status;
+
+      // Validate state transitions
+      const validTransitions: Record<BookRequestStatus, BookRequestStatus[]> = {
+        [BookRequestStatus.PENDING]: [
+          BookRequestStatus.APPROVED,
+          BookRequestStatus.DENIED,
+        ],
+        [BookRequestStatus.APPROVED]: [BookRequestStatus.PUBLISHED],
+        [BookRequestStatus.DENIED]: [],
+        [BookRequestStatus.PUBLISHED]: [],
+      };
+
+      const allowedTransitions = validTransitions[currentStatus];
+
+      if (!allowedTransitions.includes(newStatus)) {
+        throw new BadRequestException(
+          `Invalid status transition from ${currentStatus} to ${newStatus}. ` +
+            `Allowed transitions: ${allowedTransitions.length > 0 ? allowedTransitions.join(', ') : 'none (terminal state)'}`,
+        );
+      }
+
+      // Update the status and create audit record in a transaction
+
+      const result = await this.prisma.$transaction([
+        // Update the book request status
+        this.prisma.bookRequest.update({
+          where: { id },
+          data: { status: newStatus },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+              },
+            },
+            bookRequestCourse: {
+              where: {
+                deletedAt: null,
+              },
+              include: {
+                course: true,
+              },
+            },
+          },
+        }),
+        // Create audit record
+
+        this.prisma.bookRequestStatusAudit.create({
+          data: {
+            userId: user.id,
+            bookRequestId: id,
+            previousStatus: currentStatus,
+            currentStatus: newStatus,
+          },
+        }),
+      ]);
+
+      const updatedBookRequest = result[0];
+      const auditRecord = result[1];
+
+      this.logger.log(
+        `Book request ${id} status updated from ${currentStatus} to ${newStatus} by user ${user.id}`,
+      );
+      this.logger.log(`Audit record created with id: ${auditRecord.id}`);
+
+      return updatedBookRequest;
+    } catch (error) {
+      // Re-throw NestJS exceptions as-is
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof InternalServerErrorException
+      ) {
+        throw error;
+      }
+      // Wrap other errors
+      const err = error as Error;
+      this.logger.error(`Failed to update book request status:`, err);
+      throw new InternalServerErrorException(
+        `Failed to update book request status: ${err.message}`,
       );
     }
   }

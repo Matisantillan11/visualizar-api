@@ -36,6 +36,7 @@ model User {
   student Student?
   teacher Teacher?
   bookRequest BookRequest[]
+  bookRequestStatusAudit BookRequestStatusAudit[]
 }
 
 
@@ -228,6 +229,14 @@ enum AnimationType {
   MAIN
   EXTRA
 }
+
+enum BookRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  PUBLISHED
+}
+
 model BookRequest {
   id        String   @default(uuid()) @id
   createdAt DateTime @default(now())
@@ -239,10 +248,12 @@ model BookRequest {
   authorName String
   comments String?
   animations AnimationType[]
+  status BookRequestStatus @default(PENDING)
 
   //relations
   user User @relation(fields: [userId], references: [id])
   bookRequestCourse BookRequestCourse[]
+  bookRequestStatusAudit BookRequestStatusAudit[]
 }
 
 model BookRequestCourse {
@@ -257,4 +268,18 @@ model BookRequestCourse {
   //relations
   bookRequest BookRequest @relation(fields: [bookRequestId], references: [id])
   course Course @relation(fields: [courseId], references: [id])
+}
+
+model BookRequestStatusAudit {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+
+  userId String
+  bookRequestId String
+  previousStatus BookRequestStatus
+  currentStatus BookRequestStatus
+
+  //relations
+  user User @relation(fields: [userId], references: [id])
+  bookRequest BookRequest @relation(fields: [bookRequestId], references: [id])
 }

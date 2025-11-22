@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   UseGuards,
@@ -22,6 +23,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import type { AuthenticatedUser } from '../auth/types/user.interface';
 import { BooksService } from './books.service';
 import { CreateBookRequestDto } from './dto/create-book-request.dto';
+import { UpdateBookRequestStatusDto } from './dto/update-book-request-status.dto';
 
 @Controller('/api/books')
 @ApiTags('Books')
@@ -50,6 +52,20 @@ export class BooksController {
   ): Promise<any[]> {
     console.log('🔵 Controller - getMyBookRequests called with user:', user);
     return this.booksService.getBookRequestsByUserId(user);
+  }
+
+  @Get('/requests/all')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Get all book requests' })
+  @ApiResponse({
+    status: 200,
+    description: 'Get all book requests',
+  })
+  async getAllBookRequests(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<any[]> {
+    console.log('🔵 Controller - getAllBookRequests called with user:', user);
+    return this.booksService.getAllBookRequests(user);
   }
 
   @Get('/course/:courseId')
@@ -122,5 +138,28 @@ export class BooksController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.booksService.createBookRequest(createBookRequestDto, user);
+  }
+
+  @Patch('/request/:id/status')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Update book request status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Book request status updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid status transition',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Book request not found',
+  })
+  updateBookRequestStatus(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateBookRequestStatusDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.booksService.updateBookRequestStatus(id, updateDto, user);
   }
 }
