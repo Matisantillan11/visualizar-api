@@ -1,24 +1,26 @@
 import {
-  Controller,
-  Post,
   Body,
+  Controller,
+  Get,
   HttpCode,
   HttpStatus,
-  Get,
+  Post,
   UseGuards,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { SendOtpDto } from './dto/send-otp.dto';
-import { VerifyOtpDto } from './dto/verify-otp.dto';
-import { AuthResponseDto, SendOtpResponseDto } from './dto/auth-response.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { CurrentUser } from './decorators/current-user.decorator';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
-  ApiBearerAuth,
 } from '@nestjs/swagger';
+import { AuthService } from './auth.service';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { AuthResponseDto, SendOtpResponseDto } from './dto/auth-response.dto';
+import { CreateUserResponseDto } from './dto/create-user-response.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { SendOtpDto } from './dto/send-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedUser } from './types/user.interface';
 
 @Controller('api/auth')
@@ -120,6 +122,32 @@ export class AuthController {
         role: user.role,
         supabaseUserId: user.supabaseUserId,
       },
+    };
+  }
+
+  @Post('create-user')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a new user in both Supabase and database',
+    description:
+      'Creates a user in Supabase Auth first, then creates the corresponding user in the database with the specified role. If Supabase creation fails, database creation is not attempted.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'User created successfully',
+    type: CreateUserResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User already exists or creation failed',
+  })
+  async createUser(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<CreateUserResponseDto> {
+    const user = await this.authService.createUser(createUserDto);
+    return {
+      message: 'User created successfully',
+      user,
     };
   }
 }

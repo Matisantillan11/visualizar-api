@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type User, Prisma } from '@prisma/client';
+import { type User, Prisma, Role } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 
 @Injectable()
@@ -23,6 +23,24 @@ export class UsersService {
         deletedAt: null,
       },
     });
+  }
+
+  /**
+   * Get all admin user emails
+   * @returns Promise<string[]> - Array of admin email addresses
+   */
+  async getAdminEmails(): Promise<string[]> {
+    const admins = await this.prisma.user.findMany({
+      where: {
+        role: Role.ADMIN,
+        deletedAt: null,
+      },
+      select: {
+        email: true,
+      },
+    });
+
+    return admins.map((admin) => admin.email);
   }
 
   async createUser(data: Prisma.UserCreateInput): Promise<User> {

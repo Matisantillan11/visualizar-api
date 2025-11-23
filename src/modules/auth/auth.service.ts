@@ -224,4 +224,102 @@ export class AuthService {
       );
     }
   }
+
+  async createUser(createUserDto: {
+    email: string;
+    dni: string;
+    role: Role;
+    name?: string;
+  }): Promise<{
+    id: string;
+    email: string;
+    name: string | null;
+    dni: string;
+    role: Role;
+    supabaseUserId: string;
+  }> {
+    const { email, dni, role, name } = createUserDto;
+    const emailToLowerCase = email.toLowerCase();
+
+    // Check if user already exists in database
+    const existingUser = await this.usersService.getUser({
+      email: emailToLowerCase,
+    });
+
+    if (existingUser && !existingUser.deletedAt) {
+      throw new BadRequestException(
+        'User with this email already exists in the database',
+      );
+    }
+
+    // Check if DNI already exists
+    const existingDniUser = await this.usersService.getUser({ dni });
+    if (existingDniUser && !existingDniUser.deletedAt) {
+      throw new BadRequestException(
+        'User with this DNI already exists in the database',
+      );
+    }
+
+    let supabaseUserId: string;
+
+    try {
+      // Step 1: Create user in Supabase
+      const supabaseResult =
+        await this.supabaseService.createUser(emailToLowerCase);
+
+      if (!supabaseResult.user) {
+        throw new Error('Supabase user creation failed');
+      }
+
+      supabaseUserId = supabaseResult.user.id;
+    } catch (error) {
+      const err = error as Error;
+      // If Supabase creation fails, we do not proceed to database creation
+      throw new BadRequestException(
+        `Failed to create Supabase user: ${err.message}`,
+      );
+    }
+
+    try {
+      // Step 2: Create user in database (only if Supabase creation succeeded)
+      const dbUser = await this.usersService.createUser({
+        email: emailToLowerCase,
+        dni,
+        role,
+        name: name || null,
+        supabaseUserId,
+      });
+
+      // Step 3: Create role-specific records (Student or Teacher)
+      if (role === Role.STUDENT) {
+        await this.studentsService.createStudent({
+          user: {
+            connect: { id: dbUser.id },
+          },
+        });
+      } else if (role === Role.TEACHER) {
+        await this.teachersService.createTeacher({
+          user: {
+            connect: { id: dbUser.id },
+          },
+        });
+      }
+
+      return {
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+        dni: dbUser.dni,
+        role: dbUser.role,
+        supabaseUserId: dbUser.supabaseUserId!,
+      };
+    } catch (error) {
+      const err = error as Error;
+      // If database creation fails after Supabase creation, we should ideally clean up the Supabase user
+      // For now, we'll just throw an error
+      throw new BadRequestException(
+        `Failed to create database user: ${err.message}`,
+      );
+    }
+  }
 }

@@ -8,6 +8,8 @@ import {
 import { BookRequestStatus, Prisma, Role, type Book } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 import { AuthenticatedUser } from '../auth/types/user.interface';
+import { UsersService } from '../users/user.service';
+import { BooksEmailService } from './books-email.service';
 import { CreateBookRequestDto } from './dto/create-book-request.dto';
 import { UpdateBookRequestStatusDto } from './dto/update-book-request-status.dto';
 
@@ -15,7 +17,11 @@ import { UpdateBookRequestStatusDto } from './dto/update-book-request-status.dto
 export class BooksService {
   private readonly logger = new Logger(BooksService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private booksEmailService: BooksEmailService,
+    private usersService: UsersService,
+  ) {}
 
   async getBook(
     bookWhereUniqueInput: Prisma.BookWhereUniqueInput,
@@ -524,6 +530,14 @@ export class BooksService {
         JSON.stringify(bookRequest, null, 2),
       );
 
+      // Send email notifications asynchronously (don't wait for them)
+      // This ensures that email failures don't block the book request creation
+      this.sendBookRequestEmails(bookRequest, user).catch((error) => {
+        this.logger.error(
+          `Failed to send book request emails: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      });
+
       return bookRequest;
     } catch (error) {
       // Re-throw NestJS exceptions as-is
@@ -545,6 +559,82 @@ export class BooksService {
     }
   }
 
+  /**
+   * Send email notifications for a newly created book request
+   * This is called asynchronously after book request creation
+   */
+  private async sendBookRequestEmails(
+    bookRequest: {
+      id: string;
+      title: string;
+      authorName: string;
+      comments: string | null;
+      animations: any[];
+      createdAt: Date;
+      bookRequestCourse: Array<{
+        course: {
+          name: string;
+        };
+      }>;
+    },
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    try {
+      // Get all admin emails
+      const adminEmails = await this.usersService.getAdminEmails();
+
+      if (adminEmails.length > 0) {
+        // Send notification to admins
+        await this.booksEmailService.sendBookRequestNotificationToAdmins(
+          adminEmails,
+          {
+            id: bookRequest.id,
+            title: bookRequest.title,
+            authorName: bookRequest.authorName,
+            teacherName: user.name || 'Unknown Teacher',
+            teacherEmail: user.email,
+            courses: bookRequest.bookRequestCourse.map((brc) => ({
+              name: brc.course.name,
+            })),
+            comments: bookRequest.comments ?? undefined,
+            animations:
+              bookRequest.animations.length > 0
+                ? bookRequest.animations.join(', ')
+                : undefined,
+            createdAt: bookRequest.createdAt,
+          },
+        );
+
+        this.logger.log(
+          `Sent book request notification to ${adminEmails.length} admin(s)`,
+        );
+      }
+
+      // Send confirmation to teacher
+      await this.booksEmailService.sendBookRequestConfirmationToTeacher(
+        user.email,
+        user.name || 'Teacher',
+        {
+          id: bookRequest.id,
+          title: bookRequest.title,
+          authorName: bookRequest.authorName,
+          courses: bookRequest.bookRequestCourse.map((brc) => ({
+            name: brc.course.name,
+          })),
+          createdAt: bookRequest.createdAt,
+        },
+      );
+
+      this.logger.log(
+        `Sent book request confirmation to teacher ${user.email}`,
+      );
+    } catch (error) {
+      // Log the error but don't throw - we don't want email failures to affect the book request
+      this.logger.error(
+        `Error sending book request emails: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
   /**
    * Get all book requests for a specific user
    *
