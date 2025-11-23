@@ -161,8 +161,6 @@ model Book {
   description String
   imageUrl String
   animations Json[] @default([]) 
-  is3dEnabled Boolean
-  releaseDate DateTime?
 
   //relations
   bookCourse BookCourse[]
