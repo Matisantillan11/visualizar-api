@@ -218,8 +218,7 @@ export class BooksService {
       throw new Error('Category ID is required');
     }
 
-    const { courseId, authorId, categoryId, releaseDate, ...bookData } = data;
-    console.log(releaseDate);
+    const { courseId, authorId, categoryId, ...bookData } = data;
     const course = await this.prisma.course.findUnique({
       where: { id: courseId, deletedAt: null },
     });
@@ -245,7 +244,7 @@ export class BooksService {
     }
 
     const bookCreation = await this.prisma.book.create({
-      data: { ...bookData, is3dEnabled: false },
+      data: { ...bookData },
     });
 
     if (bookCreation) {
