@@ -97,9 +97,11 @@ export class BooksController {
       courseId: string;
       authorId: string;
       categoryId: string;
+      bookRequestId: string;
     },
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Book> {
-    return this.booksService.createBook(book);
+    return this.booksService.createBook(book, user);
   }
 
   @Put('/:id')
@@ -114,8 +116,9 @@ export class BooksController {
       authorId: string;
       categoryId: string;
     },
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Book> {
-    return this.booksService.updateBook({ where: { id }, data: book });
+    return this.booksService.updateBook({ where: { id }, data: book }, user);
   }
 
   @Delete('/:id')

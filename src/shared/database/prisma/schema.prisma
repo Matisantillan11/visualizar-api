@@ -37,6 +37,7 @@ model User {
   teacher Teacher?
   bookRequest BookRequest[]
   bookRequestStatusAudit BookRequestStatusAudit[]
+  bookAudit BookAudit[]
 }
 
 
@@ -161,11 +162,14 @@ model Book {
   description String
   imageUrl String
   animations Json[] @default([]) 
+  bookRequestId String?
 
   //relations
   bookCourse BookCourse[]
   bookAuthor BookAuthor[]
   bookCategory BookCategory[]
+  bookAudit BookAudit[]
+  bookRequest BookRequest? @relation(fields: [bookRequestId], references: [id])
 }
 
 model BookCourse {
@@ -222,6 +226,11 @@ model BookCategory {
   category Category @relation(fields: [categoryId], references: [id])
 }
 
+enum BookAuditAction {
+  CREATED
+  UPDATED
+}
+
 enum AnimationType {
   ALL
   MAIN
@@ -252,6 +261,8 @@ model BookRequest {
   user User @relation(fields: [userId], references: [id])
   bookRequestCourse BookRequestCourse[]
   bookRequestStatusAudit BookRequestStatusAudit[]
+  bookAudit BookAudit[]
+  books Book[]
 }
 
 model BookRequestCourse {
@@ -280,4 +291,30 @@ model BookRequestStatusAudit {
   //relations
   user User @relation(fields: [userId], references: [id])
   bookRequest BookRequest @relation(fields: [bookRequestId], references: [id])
+}
+
+model BookAudit {
+  id        String   @default(uuid()) @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Book data snapshot
+  title String
+  author String
+  description String
+  imageUrl String
+  category String
+  animations Json[] @default([])
+  courseIds String[] @default([])
+
+  // Audit metadata
+  userId String
+  bookId String?
+  bookRequestId String?
+  action BookAuditAction
+
+  //relations
+  user User @relation(fields: [userId], references: [id])
+  book Book? @relation(fields: [bookId], references: [id])
+  bookRequest BookRequest? @relation(fields: [bookRequestId], references: [id])
 }

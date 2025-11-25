@@ -204,7 +204,9 @@ export class BooksService {
       courseId: string;
       authorId: string;
       categoryId: string;
+      bookRequestId: string;
     },
+    user: AuthenticatedUser,
   ): Promise<Book> {
     if (!data.courseId) {
       throw new Error('Course ID is required');
@@ -218,7 +220,21 @@ export class BooksService {
       throw new Error('Category ID is required');
     }
 
-    const { courseId, authorId, categoryId, ...bookData } = data;
+    if (!data.bookRequestId) {
+      throw new Error('Book Request ID is required');
+    }
+
+    const { courseId, authorId, categoryId, bookRequestId, ...bookData } = data;
+
+    // Validate book request exists
+    const bookRequest = await this.prisma.bookRequest.findUnique({
+      where: { id: bookRequestId, deletedAt: null },
+    });
+
+    if (!bookRequest) {
+      throw new Error('Book Request not found');
+    }
+
     const course = await this.prisma.course.findUnique({
       where: { id: courseId, deletedAt: null },
     });
@@ -244,7 +260,10 @@ export class BooksService {
     }
 
     const bookCreation = await this.prisma.book.create({
-      data: { ...bookData },
+      data: {
+        ...bookData,
+        bookRequestId: bookRequestId,
+      },
     });
 
     if (bookCreation) {
@@ -269,20 +288,40 @@ export class BooksService {
         },
       });
 
+      // Create audit record with bookRequestId
+      await this.prisma.bookAudit.create({
+        data: {
+          title: bookCreation.name,
+          author: author.name,
+          description: bookCreation.description,
+          imageUrl: bookCreation.imageUrl,
+          category: category.name,
+          animations: bookCreation.animations,
+          courseIds: [courseId],
+          userId: user.id,
+          bookId: bookCreation.id,
+          bookRequestId: bookRequestId,
+          action: 'CREATED',
+        },
+      });
+
       return bookCreation;
     } else {
       throw new Error('Book not created');
     }
   }
 
-  async updateBook(params: {
-    where: Prisma.BookWhereUniqueInput;
-    data: Prisma.BookUpdateInput & {
-      courseId: string;
-      authorId: string;
-      categoryId: string;
-    };
-  }): Promise<Book> {
+  async updateBook(
+    params: {
+      where: Prisma.BookWhereUniqueInput;
+      data: Prisma.BookUpdateInput & {
+        courseId: string;
+        authorId: string;
+        categoryId: string;
+      };
+    },
+    user: AuthenticatedUser,
+  ): Promise<Book> {
     const { where, data } = params;
     if (!data.courseId) {
       throw new Error('Course ID is required');
@@ -345,6 +384,22 @@ export class BooksService {
       await this.prisma.bookCategory.update({
         where: { id: bookUpdate.bookCategory[0].id },
         data: { categoryId, bookId: bookUpdate.id },
+      });
+
+      // Create audit record
+      await this.prisma.bookAudit.create({
+        data: {
+          title: bookUpdate.name,
+          author: author.name,
+          description: bookUpdate.description,
+          imageUrl: bookUpdate.imageUrl,
+          category: category.name,
+          animations: bookUpdate.animations,
+          courseIds: [courseId],
+          userId: user.id,
+          bookId: bookUpdate.id,
+          action: 'UPDATED',
+        },
       });
 
       return bookUpdate;
