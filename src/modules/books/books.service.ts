@@ -224,7 +224,16 @@ export class BooksService {
       throw new Error('Book Request ID is required');
     }
 
-    const { courseId, authorId, categoryId, bookRequestId, ...bookData } = data;
+    const { courseId, authorId, categoryId, bookRequestId } = data;
+
+    // Extract only the scalar fields we need for book creation
+    const bookData: Prisma.BookUncheckedCreateInput = {
+      name: data.name,
+      description: data.description,
+      imageUrl: data.imageUrl,
+      animations: data.animations,
+      bookRequestId: bookRequestId,
+    };
 
     // Validate book request exists
     const bookRequest = await this.prisma.bookRequest.findUnique({
@@ -259,29 +268,31 @@ export class BooksService {
       throw new Error('Category not found');
     }
 
-    const bookCreation = await this.prisma.book.create({
-      data: {
-        ...bookData,
-        bookRequestId: bookRequestId,
-      },
-    });
+    // Use transaction to ensure atomicity
+    const result = await this.prisma.$transaction(async (prisma) => {
+      // Create the book
+      const bookCreation = await prisma.book.create({
+        data: bookData,
+      });
 
-    if (bookCreation) {
-      await this.prisma.bookCourse.create({
+      // Create book course relation
+      await prisma.bookCourse.create({
         data: {
           courseId,
           bookId: bookCreation.id,
         },
       });
 
-      await this.prisma.bookAuthor.create({
+      // Create book author relation
+      await prisma.bookAuthor.create({
         data: {
           authorId,
           bookId: bookCreation.id,
         },
       });
 
-      await this.prisma.bookCategory.create({
+      // Create book category relation
+      await prisma.bookCategory.create({
         data: {
           categoryId,
           bookId: bookCreation.id,
@@ -289,14 +300,14 @@ export class BooksService {
       });
 
       // Create audit record with bookRequestId
-      await this.prisma.bookAudit.create({
+      await prisma.bookAudit.create({
         data: {
           title: bookCreation.name,
           author: author.name,
           description: bookCreation.description,
           imageUrl: bookCreation.imageUrl,
           category: category.name,
-          animations: bookCreation.animations,
+          animations: bookCreation.animations as Prisma.InputJsonValue[],
           courseIds: [courseId],
           userId: user.id,
           bookId: bookCreation.id,
@@ -305,10 +316,26 @@ export class BooksService {
         },
       });
 
+      // Update book request status to PUBLISHED
+      await prisma.bookRequest.update({
+        where: { id: bookRequestId },
+        data: { status: BookRequestStatus.PUBLISHED },
+      });
+
+      // Create status audit record for the book request
+      await prisma.bookRequestStatusAudit.create({
+        data: {
+          userId: user.id,
+          bookRequestId: bookRequestId,
+          previousStatus: bookRequest.status,
+          currentStatus: BookRequestStatus.PUBLISHED,
+        },
+      });
+
       return bookCreation;
-    } else {
-      throw new Error('Book not created');
-    }
+    });
+
+    return result;
   }
 
   async updateBook(
@@ -394,7 +421,7 @@ export class BooksService {
           description: bookUpdate.description,
           imageUrl: bookUpdate.imageUrl,
           category: category.name,
-          animations: bookUpdate.animations,
+          animations: bookUpdate.animations as Prisma.InputJsonValue[],
           courseIds: [courseId],
           userId: user.id,
           bookId: bookUpdate.id,
