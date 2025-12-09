@@ -3,7 +3,7 @@ env: standard
 
 service: default
 
-entrypoint: node dist/src/main.js
+entrypoint: src/main.ts
 
 instance_class: F2
 
