@@ -22,6 +22,3 @@ node_modules/
 bruno
 docs
 test
-src
-
-!src/shared/database/*
