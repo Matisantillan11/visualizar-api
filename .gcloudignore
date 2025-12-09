@@ -23,3 +23,5 @@ bruno
 docs
 test
 src
+
+!src/shared/database/*
