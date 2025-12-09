@@ -14,4 +14,12 @@
 .gitignore
 
 # Node.js dependencies:
+.pnpm-store
+.pnpm-state.json
+pnpm-lock.yaml
 node_modules/
+
+bruno
+docs
+test
+src
