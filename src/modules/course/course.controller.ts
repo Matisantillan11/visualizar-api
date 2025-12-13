@@ -59,7 +59,11 @@ export class CourseController {
   @ApiResponse({ status: 200, description: 'Update an course' })
   updateCourse(
     @Param('id') id: string,
-    @Body() course: Prisma.CourseUpdateInput,
+    @Body()
+    course: Prisma.CourseUpdateInput & {
+      institutionId: string;
+      institutionCourseId: string;
+    },
   ): Promise<Course> {
     return this.courseService.updateCourse({ where: { id }, data: course });
   }

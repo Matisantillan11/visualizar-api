@@ -14,6 +14,13 @@ export class CourseService {
         ...courseWhereUniqueInput,
         deletedAt: null,
       },
+      include: {
+        InstitutionCourse: {
+          include: {
+            institution: true,
+          },
+        },
+      },
     });
   }
 
@@ -52,10 +59,25 @@ export class CourseService {
 
   async updateCourse(params: {
     where: Prisma.CourseWhereUniqueInput;
-    data: Prisma.CourseUpdateInput;
+    data: Prisma.CourseUpdateInput & {
+      institutionId: string;
+      institutionCourseId: string;
+    };
   }): Promise<Course> {
     const { where, data } = params;
-    return this.prisma.course.update({ data, where });
+    const { institutionId, institutionCourseId, ...courseData } = data;
+
+    if (institutionId) {
+      await this.prisma.institutionCourse.update({
+        where: {
+          id: institutionCourseId,
+        },
+        data: {
+          institutionId,
+        },
+      });
+    }
+    return this.prisma.course.update({ data: courseData, where });
   }
 
   async deleteCourse(where: Prisma.CourseWhereUniqueInput): Promise<Course> {
