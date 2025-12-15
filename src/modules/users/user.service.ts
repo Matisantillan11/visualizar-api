@@ -81,6 +81,23 @@ export class UsersService {
             deletedAt: new Date(),
           },
         });
+
+        const coursesAssigned = await this.prisma.teacherCourse.findMany({
+          where: {
+            teacherId: user.id,
+          },
+        });
+
+        if (coursesAssigned.length > 0) {
+          await this.prisma.teacherCourse.updateMany({
+            where: {
+              teacherId: user.id,
+            },
+            data: {
+              deletedAt: new Date(),
+            },
+          });
+        }
       }
     }
 
@@ -100,6 +117,23 @@ export class UsersService {
             deletedAt: new Date(),
           },
         });
+
+        const coursesAssigned = await this.prisma.studentCourse.findMany({
+          where: {
+            studentId: user.id,
+          },
+        });
+
+        if (coursesAssigned.length > 0) {
+          await this.prisma.studentCourse.updateMany({
+            where: {
+              studentId: user.id,
+            },
+            data: {
+              deletedAt: new Date(),
+            },
+          });
+        }
       }
     }
 
