@@ -16,6 +16,9 @@ export class CourseService {
       },
       include: {
         InstitutionCourse: {
+          where: {
+            deletedAt: null,
+          },
           include: {
             institution: true,
           },

@@ -5,7 +5,13 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { BookRequestStatus, Prisma, Role, type Book } from '@prisma/client';
+import {
+  BookRequest,
+  BookRequestStatus,
+  Prisma,
+  Role,
+  type Book,
+} from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 import { AuthenticatedUser } from '../auth/types/user.interface';
 import { UsersService } from '../users/user.service';
@@ -865,6 +871,47 @@ export class BooksService {
         `Failed to fetch book requests: ${err.message}`,
       );
     }
+  }
+
+  /**
+   * Get a book request by its ID
+   *
+   * @param requestId - The ID of the book request
+   * @returns Promise with the book request
+   */
+  async getBookRequestByRequestId(
+    requestId: string,
+  ): Promise<BookRequest | (BookRequest & { authorId: string }) | null> {
+    const bookRequest = await this.prisma.bookRequest.findUnique({
+      where: {
+        id: requestId,
+        deletedAt: null,
+      },
+      include: {
+        bookRequestCourse: {
+          where: {
+            deletedAt: null,
+          },
+        },
+      },
+    });
+
+    if (bookRequest) {
+      const author = await this.prisma.author.findFirst({
+        where: {
+          name: bookRequest.authorName,
+        },
+      });
+
+      if (author) {
+        return {
+          ...bookRequest,
+          authorId: author.id,
+        };
+      }
+    }
+
+    return bookRequest;
   }
 
   /**

@@ -72,7 +72,6 @@ export class SupabaseService {
       type: 'email',
     });
 
-    console.log({ data, error });
     if (error) {
       throw new Error(`Failed to verify OTP: ${error.message}`);
     }

@@ -15,7 +15,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { type Book, Prisma, Role } from '@prisma/client';
+import { type Book, BookRequest, Prisma, Role } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -101,6 +101,32 @@ export class BooksController {
     },
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Book> {
+    if (Array.isArray(book.animations)) {
+      const animationsObj: Record<string, { source: string; texture: string }> =
+        {};
+
+      (book.animations as string[]).forEach((url) => {
+        const parts = url.split('/');
+        const animationsIndex = parts.indexOf('animations');
+
+        if (animationsIndex !== -1 && parts[animationsIndex + 2]) {
+          const name = parts[animationsIndex + 2];
+
+          if (!animationsObj[name]) {
+            animationsObj[name] = { source: '', texture: '' };
+          }
+
+          if (url.endsWith('.obj')) {
+            animationsObj[name].source = url;
+          } else if (url.endsWith('.png')) {
+            animationsObj[name].texture = url;
+          }
+        }
+      });
+
+      book.animations = [animationsObj];
+    }
+
     return this.booksService.createBook(book, user);
   }
 
@@ -141,6 +167,16 @@ export class BooksController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.booksService.createBookRequest(createBookRequestDto, user);
+  }
+
+  @Get('/request/:id')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Get a book request by id' })
+  @ApiResponse({ status: 200, description: 'Get a book request by id' })
+  getBookRequest(
+    @Param('id') id: string,
+  ): Promise<BookRequest | (BookRequest & { authorId: string }) | null> {
+    return this.booksService.getBookRequestByRequestId(id);
   }
 
   @Patch('/request/:id/status')

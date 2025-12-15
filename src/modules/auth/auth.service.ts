@@ -66,10 +66,6 @@ export class AuthService {
         token,
       );
 
-      console.log({
-        supabaseAuthResult: supabaseAuthResult.user?.app_metadata,
-      });
-
       if (!supabaseAuthResult.session || !supabaseAuthResult.user) {
         throw new UnauthorizedException('Invalid OTP or expired token');
       }

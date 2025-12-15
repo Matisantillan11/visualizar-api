@@ -47,6 +47,27 @@ export class InstitutionsService {
   async deleteInstitution(
     where: Prisma.InstitutionWhereUniqueInput,
   ): Promise<Institution> {
+    const institutionId = where.id;
+
+    const getCourseOfInstitution = await this.prisma.institutionCourse.findMany(
+      {
+        where: {
+          institutionId,
+        },
+      },
+    );
+
+    if (getCourseOfInstitution.length > 0) {
+      await this.prisma.institutionCourse.updateMany({
+        where: {
+          institutionId,
+        },
+        data: {
+          deletedAt: new Date(),
+        },
+      });
+    }
+
     return this.prisma.institution.update({
       where,
       data: {

@@ -73,8 +73,6 @@ export class TeachersService {
       throw new Error('Teacher not found');
     }
 
-    console.log({ ids: data.courseIds });
-
     const courses = await this.prisma.course.findMany({
       where: {
         deletedAt: null,
@@ -83,8 +81,6 @@ export class TeachersService {
         },
       },
     });
-
-    console.log({ courses });
 
     if (!courses) {
       throw new Error('Course not found');
