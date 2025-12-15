@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Prisma, type Author } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 
@@ -38,6 +38,18 @@ export class AuthorService {
   }
 
   async deleteAuthor(where: Prisma.AuthorWhereUniqueInput): Promise<Author> {
+    const authorId = where.id;
+
+    const bookAssigned = await this.prisma.bookAuthor.findMany({
+      where: {
+        authorId,
+      },
+    });
+
+    if (bookAssigned.length > 0) {
+      throw new InternalServerErrorException('Author has assigned books');
+    }
+
     return this.prisma.author.update({
       where,
       data: {

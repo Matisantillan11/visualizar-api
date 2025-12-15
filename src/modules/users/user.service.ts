@@ -61,6 +61,48 @@ export class UsersService {
   }
 
   async deleteUser(where: Prisma.UserWhereUniqueInput): Promise<User> {
+    const user = await this.prisma.user.findUnique({
+      where,
+    });
+
+    if (user?.role === Role.TEACHER) {
+      const teacher = await this.prisma.teacher.findUnique({
+        where: {
+          userId: user.id,
+        },
+      });
+
+      if (teacher) {
+        await this.prisma.teacher.update({
+          where: {
+            userId: user.id,
+          },
+          data: {
+            deletedAt: new Date(),
+          },
+        });
+      }
+    }
+
+    if (user?.role === Role.STUDENT) {
+      const student = await this.prisma.student.findUnique({
+        where: {
+          userId: user.id,
+        },
+      });
+
+      if (student) {
+        await this.prisma.student.update({
+          where: {
+            userId: user.id,
+          },
+          data: {
+            deletedAt: new Date(),
+          },
+        });
+      }
+    }
+
     return this.prisma.user.update({
       where,
       data: {

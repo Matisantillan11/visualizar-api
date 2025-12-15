@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Prisma, type Course } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 
@@ -84,6 +84,36 @@ export class CourseService {
   }
 
   async deleteCourse(where: Prisma.CourseWhereUniqueInput): Promise<Course> {
+    const courseId = where.id;
+
+    const bookAssigned = await this.prisma.bookCourse.findMany({
+      where: {
+        courseId,
+      },
+    });
+
+    const studentsAssigned = await this.prisma.studentCourse.findMany({
+      where: {
+        courseId,
+      },
+    });
+
+    const teachersAssigned = await this.prisma.teacherCourse.findMany({
+      where: {
+        courseId,
+      },
+    });
+
+    if (
+      bookAssigned.length > 0 ||
+      studentsAssigned.length > 0 ||
+      teachersAssigned.length > 0
+    ) {
+      throw new InternalServerErrorException(
+        'Course has assigned books, students or teachers',
+      );
+    }
+
     return this.prisma.course.update({
       where,
       data: {

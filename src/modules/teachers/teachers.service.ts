@@ -49,6 +49,49 @@ export class TeachersService {
   }
 
   async deleteTeacher(where: Prisma.TeacherWhereUniqueInput): Promise<Teacher> {
+    const teacherId = where.id;
+
+    const teacher = await this.prisma.teacher.findUnique({
+      where: {
+        id: teacherId,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    const courseAssigned = await this.prisma.teacherCourse.findMany({
+      where: {
+        teacherId,
+      },
+    });
+
+    if (courseAssigned.length > 0) {
+      const coursesDeletedPromise = courseAssigned.map((course) => {
+        return this.prisma.teacherCourse.update({
+          where: {
+            id: course.id,
+          },
+          data: {
+            deletedAt: new Date(),
+          },
+        });
+      });
+
+      await Promise.all(coursesDeletedPromise);
+    }
+
+    if (teacher?.userId) {
+      await this.prisma.user.update({
+        where: {
+          id: teacher.userId,
+        },
+        data: {
+          deletedAt: new Date(),
+        },
+      });
+    }
+
     return await this.prisma.teacher.update({
       where,
       data: {

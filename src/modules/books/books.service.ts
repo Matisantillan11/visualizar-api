@@ -442,6 +442,96 @@ export class BooksService {
   }
 
   async deleteBook(where: Prisma.BookWhereUniqueInput): Promise<Book> {
+    const bookId = where.id;
+
+    const bookCourse = await this.prisma.bookCourse.findMany({
+      where: {
+        bookId,
+      },
+    });
+
+    const bookAuthor = await this.prisma.bookAuthor.findMany({
+      where: {
+        bookId,
+      },
+    });
+
+    const bookCategory = await this.prisma.bookCategory.findMany({
+      where: {
+        bookId,
+      },
+    });
+
+    if (bookCourse.length > 0) {
+      const bookCourseDeletedPromise = bookCourse.map((course) => {
+        return this.prisma.bookCourse.update({
+          where: {
+            id: course.id,
+          },
+          data: {
+            deletedAt: new Date(),
+          },
+        });
+      });
+
+      await Promise.all(bookCourseDeletedPromise);
+    }
+
+    if (bookAuthor.length > 0) {
+      const bookAuthorDeletedPromise = bookAuthor.map((author) => {
+        return this.prisma.bookAuthor.update({
+          where: {
+            id: author.id,
+          },
+          data: {
+            deletedAt: new Date(),
+          },
+        });
+      });
+
+      await Promise.all(bookAuthorDeletedPromise);
+    }
+
+    if (bookCategory.length > 0) {
+      const bookCategoryDeletedPromise = bookCategory.map((category) => {
+        return this.prisma.bookCategory.update({
+          where: {
+            id: category.id,
+          },
+          data: {
+            deletedAt: new Date(),
+          },
+        });
+      });
+
+      await Promise.all(bookCategoryDeletedPromise);
+    }
+
+    return this.prisma.book.update({
+      where,
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+  }
+
+  /**
+          deletedAt: new Date(),
+        },
+      });
+    }
+
+    if (bookCategory.length > 0) {
+      await this.prisma.bookCategory.update({
+        where: {
+          id: bookCategory[0].id,
+        },
+        data: {
+          deletedAt: new Date(),
+        },
+      });
+    }
+
     return this.prisma.book.update({
       where,
       data: {

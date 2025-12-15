@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Prisma, type Institution } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 
@@ -58,14 +58,9 @@ export class InstitutionsService {
     );
 
     if (getCourseOfInstitution.length > 0) {
-      await this.prisma.institutionCourse.updateMany({
-        where: {
-          institutionId,
-        },
-        data: {
-          deletedAt: new Date(),
-        },
-      });
+      throw new InternalServerErrorException(
+        'Institution has assigned courses',
+      );
     }
 
     return this.prisma.institution.update({

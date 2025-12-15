@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { type Category, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/shared/database/prisma/prisma.service';
 
@@ -40,6 +40,18 @@ export class CategoriesService {
   async deleteCategory(
     where: Prisma.CategoryWhereUniqueInput,
   ): Promise<Category> {
+    const categoryId = where.id;
+
+    const bookAssigned = await this.prisma.bookCategory.findMany({
+      where: {
+        categoryId,
+      },
+    });
+
+    if (bookAssigned.length > 0) {
+      throw new InternalServerErrorException('Category has assigned books');
+    }
+
     return this.prisma.category.update({
       where,
       data: {
