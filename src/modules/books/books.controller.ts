@@ -54,7 +54,7 @@ export class BooksController {
     return this.booksService.getBookRequestsByUserId(user);
   }
 
-  @Get('/requests/all')
+  @Get('/all/requests/')
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Get all book requests' })
   @ApiResponse({
