@@ -32,6 +32,8 @@ model User {
   dni   String  @unique
   role  Role
   supabaseUserId String? @unique
+  attempts Int @default(0)
+  retryAt DateTime?
 
   student Student?
   teacher Teacher?

@@ -64,6 +64,15 @@ export class SupabaseService {
 
   /**
    * Verify OTP and get session
+   * Session expires in 1 year (365 days)
+   *
+   * IMPORTANT: To set session expiration to 1 year, configure it in your Supabase project:
+   * 1. Go to Supabase Dashboard > Authentication > Settings
+   * 2. Under "Session Management", set "Time-box user sessions" to 525600 minutes (1 year)
+   * 3. Optionally set "Inactivity timeout" as needed
+   *
+   * Session expiration cannot be set programmatically via the SDK - it must be configured
+   * at the project level in the Supabase dashboard.
    */
   async verifyOTP(email: string, token: string) {
     const { data, error } = await this.supabase.auth.verifyOtp({

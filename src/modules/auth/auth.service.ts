@@ -13,6 +13,23 @@ import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { AuthenticatedUser } from './types/user.interface';
 
+interface SupabaseAuthResult {
+  session: {
+    access_token: string;
+    refresh_token: string;
+    user: {
+      id: string;
+      user_metadata?: {
+        avatar_url?: string;
+      };
+    };
+  } | null;
+  user: {
+    id: string;
+    email?: string;
+  } | null;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -35,6 +52,38 @@ export class AuthService {
       );
     }
 
+    // Check if account is blocked
+    const now = new Date();
+    if (user.retryAt && user.retryAt > now) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const userAttempts: number = user.attempts || 0;
+      const remainingAttempts: number = Math.max(0, 3 - userAttempts);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const retryAtDate: Date = user.retryAt;
+      const errorResponse: {
+        message: string;
+        attempts: number;
+        retryAt: Date;
+      } = {
+        message:
+          'Account is temporarily blocked due to multiple failed OTP attempts',
+        attempts: remainingAttempts,
+        retryAt: retryAtDate,
+      };
+      throw new UnauthorizedException(errorResponse);
+    }
+
+    // Reset attempts if block period has expired
+    if (user.retryAt && user.retryAt <= now) {
+      await this.usersService.updateUser({
+        where: { id: user.id },
+        data: {
+          attempts: 0,
+          retryAt: null,
+        },
+      });
+    }
+
     try {
       // Send OTP via Supabase
       await this.supabaseService.sendOTP(emailToLowerCase);
@@ -43,8 +92,8 @@ export class AuthService {
         message: 'OTP sent successfully',
         email: emailToLowerCase,
       };
-    } catch (error) {
-      const err = error as Error;
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
       throw new BadRequestException(`Failed to send OTP: ${err.message}`);
     }
   }
@@ -59,101 +108,191 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
+    // Check if account is blocked
+    const now = new Date();
+    if (user.retryAt && user.retryAt > now) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const userAttempts: number = user.attempts || 0;
+      const remainingAttempts: number = Math.max(0, 3 - userAttempts);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const retryAtDate: Date = user.retryAt;
+      const errorResponse: {
+        message: string;
+        attempts: number;
+        retryAt: Date;
+      } = {
+        message:
+          'Account is temporarily blocked due to multiple failed OTP attempts',
+        attempts: remainingAttempts,
+        retryAt: retryAtDate,
+      };
+      throw new UnauthorizedException(errorResponse);
+    }
+
+    // Reset attempts if block period has expired
+    if (user.retryAt && user.retryAt <= now) {
+      await this.usersService.updateUser({
+        where: { id: user.id },
+        data: {
+          attempts: 0,
+          retryAt: null,
+        },
+      });
+    }
+
+    let supabaseAuthResult: SupabaseAuthResult;
     try {
       // Verify OTP with Supabase
-      const supabaseAuthResult = await this.supabaseService.verifyOTP(
+      supabaseAuthResult = (await this.supabaseService.verifyOTP(
         emailToLowerCase,
         token,
-      );
+      )) as SupabaseAuthResult;
+    } catch (error: unknown) {
+      // Handle Supabase OTP verification errors
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.log({ err });
 
-      if (!supabaseAuthResult.session || !supabaseAuthResult.user) {
-        throw new UnauthorizedException('Invalid OTP or expired token');
-      }
+      // Increment failed attempts for Supabase errors
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const newAttempts: number = (user.attempts || 0) + 1;
+      const shouldBlock = newAttempts >= 3;
+      const blockedUntil: Date | null = shouldBlock
+        ? new Date(now.getTime() + 5 * 60 * 1000) // 5 minutes from now
+        : null;
 
-      // Update user's supabaseUserId if it's not set or has changed
-      if (
-        !user.supabaseUserId ||
-        user.supabaseUserId !== supabaseAuthResult.user.id
-      ) {
-        await this.usersService.updateUser({
-          where: { id: user.id },
-          data: { supabaseUserId: supabaseAuthResult.user.id },
-        });
-      }
+      await this.usersService.updateUser({
+        where: { id: user.id },
+        data: {
+          attempts: newAttempts,
+          retryAt: blockedUntil,
+        },
+      });
 
-      const isTeacher = user.role === Role.TEACHER;
-      const isStudent = user.role === Role.STUDENT;
+      const remainingAttempts: number = Math.max(0, 3 - newAttempts);
+      const errorResponse = {
+        message: 'Invalid or expired OTP code',
+        attempts: remainingAttempts,
+        retryAt: blockedUntil,
+      };
+      throw new UnauthorizedException(errorResponse);
+    }
 
-      if (isTeacher) {
-        const teacher = await this.teachersService.getTeacher({
-          userId: user.id,
-        });
+    // Check if session is valid after successful Supabase verification
+    if (!supabaseAuthResult?.session || !supabaseAuthResult?.user) {
+      // Increment failed attempts
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const newAttempts: number = (user.attempts || 0) + 1;
+      const shouldBlock = newAttempts >= 3;
+      const blockedUntil: Date | null = shouldBlock
+        ? new Date(now.getTime() + 5 * 60 * 1000) // 5 minutes from now
+        : null;
 
-        if (!teacher) {
-          throw new UnauthorizedException('Teacher not found');
-        }
+      await this.usersService.updateUser({
+        where: { id: user.id },
+        data: {
+          attempts: newAttempts,
+          retryAt: blockedUntil,
+        },
+      });
 
-        return {
-          access_token: supabaseAuthResult.session.access_token,
-          refresh_token: supabaseAuthResult.session.refresh_token,
-          user: {
-            id: user.id,
-            teacherId: teacher.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            supabaseUserId: supabaseAuthResult.user.id,
-          },
-        };
-      }
+      const remainingAttempts: number = Math.max(0, 3 - newAttempts);
+      const errorResponse: {
+        message: string;
+        attempts: number;
+        retryAt: Date | null;
+      } = {
+        message: 'Invalid OTP or expired token',
+        attempts: remainingAttempts,
+        retryAt: blockedUntil,
+      };
+      throw new UnauthorizedException(errorResponse);
+    }
 
-      if (isStudent) {
-        const student = await this.studentsService.getStudent({
-          userId: user.id,
-        });
+    // At this point, we know session and user are not null (checked above)
+    const session = supabaseAuthResult.session;
+    const supabaseUser = supabaseAuthResult.user;
 
-        if (!student) {
-          throw new UnauthorizedException('Student not found');
-        }
+    if (!session || !supabaseUser) {
+      throw new UnauthorizedException('Invalid session data');
+    }
 
-        return {
-          access_token: supabaseAuthResult.session.access_token,
-          refresh_token: supabaseAuthResult.session.refresh_token,
-          user: {
-            id: user.id,
-            studentId: student.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            supabaseUserId: supabaseAuthResult.user.id,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            avatar: supabaseAuthResult?.session?.user.user_metadata.avatar_url,
-          },
-        };
+    // Reset OTP attempts on successful verification
+    await this.usersService.updateUser({
+      where: { id: user.id },
+      data: {
+        attempts: 0,
+        retryAt: null,
+        supabaseUserId: supabaseUser.id,
+      },
+    });
+
+    const isTeacher = user.role === Role.TEACHER;
+    const isStudent = user.role === Role.STUDENT;
+
+    if (isTeacher) {
+      const teacher = await this.teachersService.getTeacher({
+        userId: user.id,
+      });
+
+      if (!teacher) {
+        throw new UnauthorizedException('Teacher not found');
       }
 
       return {
-        access_token: supabaseAuthResult.session.access_token,
-        refresh_token: supabaseAuthResult.session.refresh_token,
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
         user: {
           id: user.id,
+          teacherId: teacher.id,
           email: user.email,
           name: user.name,
           role: user.role,
-          supabaseUserId: supabaseAuthResult.user.id,
+          supabaseUserId: supabaseUser.id,
         },
+        attempts: 3,
+        retryAt: null,
       };
-    } catch (error) {
-      const err = error as Error;
-      console.log({ err });
-      if (
-        err.message.includes('Invalid OTP') ||
-        err.message.includes('expired')
-      ) {
-        throw new UnauthorizedException('Invalid or expired OTP code');
-      }
-      throw new BadRequestException(`Failed to verify OTP: ${err.message}`);
     }
+
+    if (isStudent) {
+      const student = await this.studentsService.getStudent({
+        userId: user.id,
+      });
+
+      if (!student) {
+        throw new UnauthorizedException('Student not found');
+      }
+
+      return {
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        user: {
+          id: user.id,
+          studentId: student.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          supabaseUserId: supabaseUser.id,
+          avatar: session.user.user_metadata?.avatar_url,
+        },
+        attempts: 3,
+        retryAt: null,
+      };
+    }
+
+    return {
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        supabaseUserId: supabaseUser.id,
+      },
+      attempts: 3,
+      retryAt: null,
+    };
   }
 
   async validateUserById(userId: string): Promise<AuthenticatedUser> {
@@ -268,8 +407,8 @@ export class AuthService {
       }
 
       supabaseUserId = supabaseResult.user.id;
-    } catch (error) {
-      const err = error as Error;
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
       // If Supabase creation fails, we do not proceed to database creation
       throw new BadRequestException(
         `Failed to create Supabase user: ${err.message}`,
@@ -309,8 +448,8 @@ export class AuthService {
         role: dbUser.role,
         supabaseUserId: dbUser.supabaseUserId!,
       };
-    } catch (error) {
-      const err = error as Error;
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
       // If database creation fails after Supabase creation, we should ideally clean up the Supabase user
       // For now, we'll just throw an error
       throw new BadRequestException(

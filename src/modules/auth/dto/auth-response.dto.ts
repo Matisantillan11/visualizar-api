@@ -27,7 +27,22 @@ export class AuthResponseDto {
     role: Role;
     supabaseUserId: string;
     avatar?: any;
+    retryAt?: Date;
+    attempts?: number;
   };
+
+  @ApiProperty({
+    description: 'Number of OTP attempts remaining',
+    example: 3,
+  })
+  attempts: number;
+
+  @ApiProperty({
+    description: 'Date when account will be unblocked (null if not blocked)',
+    example: null,
+    nullable: true,
+  })
+  retryAt: Date | null;
 }
 
 export class SendOtpResponseDto {
