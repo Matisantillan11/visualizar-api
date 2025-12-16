@@ -1,18 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class SupabaseService {
+  private readonly logger = new Logger(SupabaseService.name);
   private readonly supabase: SupabaseClient;
   private readonly supabaseAdmin: SupabaseClient;
 
   constructor(private configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseKey = this.configService.get<string>('SUPABASE_ANON_KEY');
-    const supabaseServiceRoleKey = this.configService.get<string>(
-      'SUPABASE_SERVICE_ROLE_KEY',
-    );
+    const supabaseServiceRoleKey =
+      this.configService.get<string>('SUPABASE_SR_KEY');
 
     if (!supabaseUrl || !supabaseKey) {
       throw new Error(
@@ -27,12 +27,7 @@ export class SupabaseService {
     // Admin client for admin operations (requires service role key)
     if (supabaseServiceRoleKey) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      });
+      this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
     } else {
       // Fallback to regular client if service role key is not provided
 
@@ -117,30 +112,63 @@ export class SupabaseService {
   }
 
   /**
+   * Get user from Supabase Auth by email
+   * This uses the admin API to search for users by email
+   */
+  async getUserByEmail(email: string) {
+    try {
+      const { data, error } = await this.supabaseAdmin.auth.admin.listUsers();
+
+      if (error) {
+        throw new Error(`Failed to list Supabase users: ${error.message}`);
+      }
+
+      const emailToLowerCase = email.toLowerCase();
+      const user = data.users.find(
+        (u) => u.email?.toLowerCase() === emailToLowerCase,
+      );
+      return user || null;
+    } catch (error) {
+      const err = error as Error;
+      throw new Error(`Failed to get user by email: ${err.message}`);
+    }
+  }
+
+  /**
    * Create a new user in Supabase Auth
    * This uses the admin API to create users without requiring a password
-   *
-   * Note: Make sure your Supabase project has the following settings:
-   * 1. Authentication > Providers > Email: Enabled
-   * 2. Authentication > Settings > Enable email confirmations: Can be on or off
-   * 3. You must use the service_role key (not anon key) for admin operations
+   * If the user already exists in Supabase, returns the existing user
    */
-  async createUser(email: string) {
+  async createUser(email: string, name: string) {
+    // Create new user in Supabase Auth
     const { data, error } = await this.supabaseAdmin.auth.admin.createUser({
-      email,
-      email_confirm: true, // Auto-confirm the email so they can sign in with OTP
+      email: email.toLowerCase(),
       user_metadata: {
-        created_by: 'admin',
-      },
+        name,
+      }, // Optional: add extra data like a name or age
+      email_confirm: true,
       app_metadata: {
         provider: 'email',
       },
     });
 
     if (error) {
+      // If user already exists error, try to get the existing user
+      if (
+        error.message.includes('already registered') ||
+        error.message.includes('already exists') ||
+        error.message.includes('User already registered')
+      ) {
+        const existingUser = await this.getUserByEmail(email.toLowerCase());
+        if (existingUser) {
+          return {
+            user: existingUser,
+            session: null,
+          };
+        }
+      }
       throw new Error(`Failed to create Supabase user: ${error.message}`);
     }
-
     return data;
   }
 }

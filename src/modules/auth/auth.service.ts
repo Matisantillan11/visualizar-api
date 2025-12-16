@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -32,6 +33,8 @@ interface SupabaseAuthResult {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private teachersService: TeachersService,
@@ -150,7 +153,11 @@ export class AuthService {
     } catch (error: unknown) {
       // Handle Supabase OTP verification errors
       const err = error instanceof Error ? error : new Error(String(error));
-      console.log({ err });
+      this.logger.error(
+        'Supabase OTP verification error:',
+        err.message,
+        err.stack,
+      );
 
       // Increment failed attempts for Supabase errors
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -398,12 +405,16 @@ export class AuthService {
     let supabaseUserId: string;
 
     try {
-      // Step 1: Create user in Supabase
-      const supabaseResult =
-        await this.supabaseService.createUser(emailToLowerCase);
+      // Step 1: Create user in Supabase Auth (or get existing user)
+      // This ensures the user exists in Supabase Authentication dashboard
+      // and can sign in with OTP
+      const supabaseResult = await this.supabaseService.createUser(
+        emailToLowerCase,
+        name ?? '',
+      );
 
       if (!supabaseResult.user) {
-        throw new Error('Supabase user creation failed');
+        throw new Error('Supabase user creation failed - user already exists');
       }
 
       supabaseUserId = supabaseResult.user.id;
@@ -411,7 +422,7 @@ export class AuthService {
       const err = error instanceof Error ? error : new Error(String(error));
       // If Supabase creation fails, we do not proceed to database creation
       throw new BadRequestException(
-        `Failed to create Supabase user: ${err.message}`,
+        `Failed to create or retrieve Supabase user: ${err.message}`,
       );
     }
 
