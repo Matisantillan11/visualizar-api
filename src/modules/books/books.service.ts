@@ -341,6 +341,47 @@ export class BooksService {
       return bookCreation;
     });
 
+    // Send email notification to the teacher asynchronously
+    // Get the teacher's information from the book request
+    const bookRequestWithUser = await this.prisma.bookRequest.findUnique({
+      where: { id: bookRequestId },
+      include: {
+        user: true,
+        bookRequestCourse: {
+          include: {
+            course: true,
+          },
+        },
+      },
+    });
+
+    if (bookRequestWithUser && bookRequestWithUser.user) {
+      // Send email asynchronously (don't wait for it)
+      this.booksEmailService
+        .sendBookPublishedNotificationToTeacher(
+          bookRequestWithUser.user.email,
+          bookRequestWithUser.user.name || 'Teacher',
+          {
+            id: result.id,
+            title: bookRequestWithUser.title,
+            authorName: bookRequestWithUser.authorName,
+            courses: bookRequestWithUser.bookRequestCourse.map((brc) => ({
+              name: brc.course.name,
+            })),
+            publishedAt: new Date(),
+          },
+        )
+        .catch((error) => {
+          this.logger.error(
+            `Failed to send book published notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+        });
+
+      this.logger.log(
+        `Book published notification queued for teacher ${bookRequestWithUser.user.email}`,
+      );
+    }
+
     return result;
   }
 
@@ -505,31 +546,6 @@ export class BooksService {
       });
 
       await Promise.all(bookCategoryDeletedPromise);
-    }
-
-    return this.prisma.book.update({
-      where,
-      data: {
-        deletedAt: new Date(),
-      },
-    });
-  }
-
-  /**
-          deletedAt: new Date(),
-        },
-      });
-    }
-
-    if (bookCategory.length > 0) {
-      await this.prisma.bookCategory.update({
-        where: {
-          id: bookCategory[0].id,
-        },
-        data: {
-          deletedAt: new Date(),
-        },
-      });
     }
 
     return this.prisma.book.update({

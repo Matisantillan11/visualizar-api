@@ -81,16 +81,38 @@ export class EmailService {
     }
 
     try {
+      const fromEmail = options.from || this.defaultFrom;
       const msg = {
         to: options.to,
-        from: options.from || this.defaultFrom,
+        from: {
+          email: fromEmail,
+          name: 'Visualizar',
+        },
         subject: options.subject,
         ...(options.text && { text: options.text }),
         ...(options.html && { html: options.html }),
         ...(options.cc && { cc: options.cc }),
         ...(options.bcc && { bcc: options.bcc }),
-        ...(options.replyTo && { replyTo: options.replyTo }),
+        // Set replyTo to the from address if not specified
+        replyTo: options.replyTo || fromEmail,
         ...(options.attachments && { attachments: options.attachments }),
+        // Add headers to improve deliverability and avoid spam
+        headers: {
+          'X-Priority': '1',
+          Importance: 'high',
+          'X-MSMail-Priority': 'High',
+          // Add a custom message ID for tracking
+          'X-Entity-Ref-ID': `visualizar-${Date.now()}`,
+        },
+        // Content settings
+        trackingSettings: {
+          clickTracking: {
+            enable: false,
+          },
+          openTracking: {
+            enable: false,
+          },
+        },
       } as sgMail.MailDataRequired;
 
       if (!msg.from) {
