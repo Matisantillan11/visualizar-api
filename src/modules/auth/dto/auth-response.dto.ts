@@ -21,6 +21,10 @@ export class AuthResponseDto {
     id: string;
     teacherId?: string;
     studentId?: string;
+    course?: {
+      id: string;
+      name: string;
+    };
     institutionId?: string;
     email: string;
     name: string | null;

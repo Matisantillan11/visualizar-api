@@ -58,10 +58,9 @@ export class AuthService {
     // Check if account is blocked
     const now = new Date();
     if (user.retryAt && user.retryAt > now) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const userAttempts: number = user.attempts || 0;
       const remainingAttempts: number = Math.max(0, 3 - userAttempts);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const retryAtDate: Date = user.retryAt;
       const errorResponse: {
         message: string;
@@ -114,10 +113,9 @@ export class AuthService {
     // Check if account is blocked
     const now = new Date();
     if (user.retryAt && user.retryAt > now) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const userAttempts: number = user.attempts || 0;
       const remainingAttempts: number = Math.max(0, 3 - userAttempts);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const retryAtDate: Date = user.retryAt;
       const errorResponse: {
         message: string;
@@ -160,7 +158,7 @@ export class AuthService {
       );
 
       // Increment failed attempts for Supabase errors
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const newAttempts: number = (user.attempts || 0) + 1;
       const shouldBlock = newAttempts >= 3;
       const blockedUntil: Date | null = shouldBlock
@@ -187,7 +185,7 @@ export class AuthService {
     // Check if session is valid after successful Supabase verification
     if (!supabaseAuthResult?.session || !supabaseAuthResult?.user) {
       // Increment failed attempts
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const newAttempts: number = (user.attempts || 0) + 1;
       const shouldBlock = newAttempts >= 3;
       const blockedUntil: Date | null = shouldBlock
@@ -270,12 +268,18 @@ export class AuthService {
         throw new UnauthorizedException('Student not found');
       }
 
+      const studentCourse = await this.studentsService.getCoursesOfStudent(
+        student.id,
+      );
+
       return {
         access_token: session.access_token,
         refresh_token: session.refresh_token,
         user: {
           id: user.id,
           studentId: student.id,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          course: studentCourse?.[0],
           email: user.email,
           name: user.name,
           role: user.role,
@@ -371,6 +375,7 @@ export class AuthService {
     email: string;
     dni: string;
     role: Role;
+    courseId: string;
     name?: string;
   }): Promise<{
     id: string;
@@ -380,7 +385,7 @@ export class AuthService {
     role: Role;
     supabaseUserId: string;
   }> {
-    const { email, dni, role, name } = createUserDto;
+    const { email, dni, role, name, courseId } = createUserDto;
     const emailToLowerCase = email.toLowerCase();
 
     // Check if user already exists in database
@@ -442,11 +447,21 @@ export class AuthService {
           user: {
             connect: { id: dbUser.id },
           },
+          studentCourse: {
+            create: {
+              courseId,
+            },
+          },
         });
       } else if (role === Role.TEACHER) {
         await this.teachersService.createTeacher({
           user: {
             connect: { id: dbUser.id },
+          },
+          teacherCourse: {
+            create: {
+              courseId,
+            },
           },
         });
       }

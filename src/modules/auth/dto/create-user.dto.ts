@@ -42,4 +42,12 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   name?: string;
+
+  @ApiProperty({
+    description: 'User course ID',
+    example: '12345678',
+    required: true,
+  })
+  @IsString()
+  courseId: string;
 }
