@@ -1121,6 +1121,38 @@ export class BooksService {
         }),
       ]);
 
+      if (newStatus === 'APPROVED') {
+        await this.booksEmailService.sendBookRequestApprovedToTeacher(
+          user.email,
+          user.name || 'Teacher',
+          {
+            id: result[0].id,
+            title: result[0].title,
+            authorName: result[0].authorName,
+            updatedAt: result[0].updatedAt,
+            courses: result[0].bookRequestCourse.map((bookRequestCourse) => ({
+              name: bookRequestCourse.course.name,
+            })),
+          },
+        );
+      }
+
+      if (newStatus === 'DENIED') {
+        await this.booksEmailService.sendBookRequestRejectedToTeacher(
+          user.email,
+          user.name || 'Teacher',
+          {
+            id: result[0].id,
+            title: result[0].title,
+            authorName: result[0].authorName,
+            updatedAt: result[0].updatedAt,
+            courses: result[0].bookRequestCourse.map((bookRequestCourse) => ({
+              name: bookRequestCourse.course.name,
+            })),
+          },
+        );
+      }
+
       const updatedBookRequest = result[0];
       const auditRecord = result[1];
 
